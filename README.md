@@ -9,7 +9,6 @@ The project focuses on robust UAV tracking under challenging thermal infrared co
 This repository is currently under active organization. The following materials will be gradually released and documented:
 
 - Source code
-- Dataset preparation instructions
 - Training commands
 - Evaluation commands
 - Debugging and testing commands
@@ -18,24 +17,26 @@ This repository is currently under active organization. The following materials 
 
 The pre-trained checkpoint for **STCMTrack-Base** has been released.
 
-All contents of this repository are expected to be completed within one week.
-
 ## Project Structure
 
-The repository will be organized as follows:
+The repository is organized as follows:
 
 ```text
 STCMTrack/
-├── datasets/        # Dataset preparation instructions
-├── experiments/     # Experiment configurations
-├── lib/             # Core implementation
-├── tracking/        # Training and evaluation scripts
-├── pretrained/      # Pre-trained weights and model checkpoints
-├── results/         # Tracking results and evaluation outputs
+├── assets/        # Project figures and visualization assets
+├── checkpoints/   # Training checkpoints and intermediate saved models
+├── configs/       # Model and experiment configuration files
+├── datasets/      # Dataset preparation instructions
+├── docs/          # Supplementary documentation
+├── pretrained/    # Pre-trained weights downloaded from GitHub Releases
+├── results/       # Tracking results, evaluation outputs, and visualizations
+├── scripts/       # Helper scripts for running experiments
+├── stcmtrack/     # Core implementation of STCMTrack
+├── tools/         # Entry scripts for training, testing, and evaluation
 └── README.md
 ```
 
-Please note that large files, such as datasets and model weights, may not be directly stored in this repository. Download links and usage instructions will be provided instead.
+Please note that large files, such as datasets and model weights, are not directly stored in this repository. Download links and usage instructions are provided instead.
 
 ## Dataset
 
@@ -55,10 +56,27 @@ for dataset download links, preparation instructions, and the recommended direct
 |---|---|---|
 | STCMTrack-Base | [Download](https://github.com/li-jiachen/STCMTrack/releases/download/v0.1.0/stcmtrack_base.bin) | Pretrained checkpoint for STCMTrack-Base |
 
-Please download the checkpoint and place it under:
+The pre-trained checkpoint is released through GitHub Releases.
+
+Please download `stcmtrack_base.bin` from the link above and place it under the following path:
 
 ```text
 pretrained/stcmtrack_base.bin
+```
+
+For example:
+
+```bash
+mkdir -p pretrained
+# then place stcmtrack_base.bin into the pretrained/ directory
+```
+
+After preparation, the expected file structure should be:
+
+```text
+STCMTrack/
+└── pretrained/
+    └── stcmtrack_base.bin
 ```
 
 ## Installation
