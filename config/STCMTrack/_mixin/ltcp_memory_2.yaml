@@ -1,0 +1,8 @@
+- path: "model.ltcp.memory_size"
+  value: 2
+- path: "logging.tags"
+  action: "append"
+  value: "ltcp_memory_2"
+- path: "name"
+  action: "append"
+  value: "-ltcp-mem2"

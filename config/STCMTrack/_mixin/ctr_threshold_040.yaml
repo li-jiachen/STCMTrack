@@ -1,0 +1,8 @@
+- path: "run.runner.test.evaluator.pipeline.motion_compensation.confidence_threshold"
+  value: 0.40
+- path: "logging.tags"
+  action: "append"
+  value: "ctr_threshold_040"
+- path: "name"
+  action: "append"
+  value: "-ctr040"

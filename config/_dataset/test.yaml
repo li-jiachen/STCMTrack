@@ -1,0 +1,11 @@
+filters:
+  - type: "data_cleaning.annotation_standard"
+    parameters:
+      bounding_box_format: "XYXY"
+      bounding_box_coordinate_system: "Continuous"
+
+datasets:
+  - name: "ANTIUAV"          # 必须与种子类文件名一致（ANTIUAV.py）
+    type: "SOT"
+    splits:
+      - "test"

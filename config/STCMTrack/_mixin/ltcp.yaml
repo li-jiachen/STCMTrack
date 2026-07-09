@@ -1,0 +1,21 @@
+- path: "model.ltcp"
+  value:
+    enabled: true
+    train_only: false
+    memory_size: 15
+    detach_memory: true
+    eps: 0.000001
+    frame_softmax_temperature: 1.0
+    gate_bias_init: -4.0
+    confidence_weight_init: 2.0
+    max_gate: 0.05
+    store_enhanced_memory: false
+    memory_device: "cpu"
+    memory_dtype: "float32"
+    print_summary: true
+- path: "logging.tags"
+  action: "append"
+  value: "ltcp"
+- path: "name"
+  action: "append"
+  value: "-ltcp"
