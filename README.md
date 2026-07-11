@@ -107,14 +107,23 @@ Optional runtime helpers:
 Minimal verification:
 
 ```bash
-python3 - <<'ENDPY'
+python - <<'PY'
+import sys
+
 import cv2
+import numpy as np
+import timm
 import torch
-print('cv2', cv2.__version__)
-print('torch', torch.__version__)
-print('cuda_available', torch.cuda.is_available())
-ENDPY
-```
+import torchvision
+
+print("Python:", sys.version.split()[0])
+print("PyTorch:", torch.__version__)
+print("torchvision:", torchvision.__version__)
+print("NumPy:", np.__version__)
+print("OpenCV:", cv2.__version__)
+print("timm:", timm.__version__)
+print("CUDA available:", torch.cuda.is_available())
+PY
 
 The provided scripts default to `CONDA_ENV=spmtrack`. You can override it:
 
@@ -209,7 +218,18 @@ python3 tools/evaluate_antiuav_iou_p20.py <results.zip> \
 
 ## Acknowledgement
 
-This project is built upon the tracking framework and implementation practices of related visual tracking repositories, including SPMTrack. We thank the authors for their open-source contributions.
+This codebase is developed from [SPMTrack](https://github.com/WenRuiCai/SPMTrack), the official implementation of “SPMTrack: Spatio-Temporal Parameter-Efficient Fine-Tuning with Mixture of Experts for Scalable Visual Tracking” (CVPR 2025). We thank the SPMTrack authors for making their code publicly available.
+
+```bibtex
+@inproceedings{cai2025spmtrack,
+    author = {Cai, Wenrui and Liu, Qingjie and Wang, Yunhong},
+    title = {SPMTrack: Spatio-Temporal Parameter-Efficient Fine-Tuning with Mixture of Experts for Scalable Visual Tracking},
+    booktitle = {Proceedings of the Computer Vision and Pattern Recognition Conference (CVPR)},
+    month = {June},
+    year = {2025},
+    pages = {16871--16881}
+}
+```
 
 ## Contact
 

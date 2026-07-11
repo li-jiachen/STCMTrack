@@ -6,8 +6,8 @@ Weight files are intentionally not committed to Git.
 
 By default:
 
-- `test_stcmtrack.sh` loads [`weights/stcmtrack_base.bin`](./stcmtrack_base.bin) first, then loads [`weights/stcmtrack_ltcp.bin`](./stcmtrack_ltcp.bin).
-- `train_stcmtrack.sh` uses [`weights/stcmtrack_base.bin`](./stcmtrack_base.bin) as the initialization checkpoint.
+- `test_stcmtrack.sh` loads `weights/stcmtrack_base.bin` first, then loads `weights/stcmtrack_ltcp.bin`.
+- `train_stcmtrack.sh` uses `weights/stcmtrack_base.bin` as the initialization checkpoint.
 
 ## Weight Files
 
