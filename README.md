@@ -7,8 +7,7 @@ This repository provides the released inference and evaluation pipeline, togethe
 ## News
 
 - Inference, evaluation, and training entry points are available.
-- The base and LTCP incremental checkpoints are distributed through the `v0.2.0` GitHub Release. See `weights/README.md` for filenames, checksums, and loading notes.
-- Checkpoint files are not committed to Git. Please see `weights/README.md` for placement instructions.
+- The base and LTCP incremental checkpoints are distributed through the `v0.2.0` GitHub Release and are not committed to Git. See [weights/README.md](weights/README.md) for filenames, checksums, and loading notes.
 
 ### ⭐ Introduction
 
@@ -100,6 +99,23 @@ pip install --index-url https://download.pytorch.org/whl/cu121 \
 pip install -r requirements.txt
 ```
 
+Optional runtime helpers:
+
+- OpenCV/MOG2 is required for the verified CTR foreground-correction path. On Debian/Ubuntu, the `opencv-python` wheel provides the Python bindings used here; make sure the system can load its native image libraries if your environment is minimal.
+- `PyTurboJPEG` is used only if you want the optional TurboJPEG acceleration path; otherwise it is not required.
+
+Minimal verification:
+
+```bash
+python3 - <<'ENDPY'
+import cv2
+import torch
+print('cv2', cv2.__version__)
+print('torch', torch.__version__)
+print('cuda_available', torch.cuda.is_available())
+ENDPY
+```
+
 The provided scripts default to `CONDA_ENV=spmtrack`. You can override it:
 
 ```bash
@@ -155,7 +171,6 @@ DEVICE_IDS=0 ./train_stcmtrack.sh
 
 ```bash
 BASE_WEIGHT=/path/to/stcmtrack_base.bin \
-LTCP_WEIGHT=/path/to/stcmtrack_ltcp.bin \
 OUTPUT_DIR=/path/to/train_output \
 DEVICE_IDS=0 \
 ./train_stcmtrack.sh

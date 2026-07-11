@@ -1,6 +1,6 @@
 # STCMTrack Implementation Notes
 
-This document records the released STCMTrack configuration corresponding to the manuscript `STCMTrack: Confidence-Guided Spatio-Temporal Context Modeling for Robust Anti-UAV Tracking`.
+This document records the released STCMTrack configuration corresponding to the manuscript `STCMTrack: Confidence-Guided Spatio-Temporal Context Modeling for Robust Anti-UAV Tracking`. The implementation inherits and extends the SPMTrack codebase.
 
 Module mapping:
 
@@ -15,7 +15,7 @@ Released configuration:
 - Full test dataset: `ANTIUAV410-test`
 - LTCP memory size: `2`
 - CTR confidence threshold: `0.40`
-- New evaluation metric: per-sequence `AUC`, `P@20`, `NP@0.5`, then average over sequences
+- Evaluation aggregation: per-sequence `AUC`, `P@20`, and `PNorm@0.5`, followed by an unweighted average over sequences
 - Paper-reported Anti-UAV410 test result: `AUC=69.2`, `P@20=88.9`, `PNorm=88.4`
 
 The model builder `type` remains `STCMTrack` so existing weights load without remapping parameter names.
