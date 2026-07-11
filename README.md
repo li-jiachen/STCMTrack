@@ -2,11 +2,12 @@
 
 Official implementation of “STCMTrack: Confidence-Guided Spatio-Temporal Context Modeling for Robust Anti-UAV Tracking”.
 
-The codebase is being organized for reproducibility and release.
+This repository provides the released inference and evaluation pipeline, together with a training entry point and checkpoint placement instructions.
 
 ## News
 
-- Code and evaluation scripts are being progressively cleaned and released.
+- Inference, evaluation, and training entry points are available.
+- The base checkpoint is available through GitHub Releases. The LTCP incremental checkpoint is not yet publicly available; see `weights/README.md` for its expected filename and checksum.
 - Checkpoint files are not committed to Git. Please see `weights/README.md` for placement instructions.
 
 ### ⭐ Introduction
@@ -22,7 +23,7 @@ It contains two main modules:
 
 LTCP models local region-level temporal consistency between current search tokens and historical search-token memory. The current verified memory size is `2`.
 
-CTR uses prediction confidence to trigger re-localization. The paper description includes motion center correction and residual-guided target correction, but the current released implementation notes should avoid overstating unverified residual-guided details.
+CTR uses prediction confidence to trigger re-localization. The paper describes motion center correction and residual-guided target correction, while the released implementation currently provides the verified foreground-correction path based on MOG2. The residual-guided branch described in the paper is not presented as a fully verified release in this repository.
 
 ### ⭐ Strong Performance
 
@@ -147,7 +148,7 @@ DEVICE_IDS=0 ./train_stcmtrack.sh
 
 - Uses `weights/stcmtrack_base.bin` by default.
 - Outputs to `output/stcmtrack_train`.
-- Training launcher is provided and still being cleaned up for release.
+- Training launcher is provided as a reference entry point. Full reproduction of every paper table is not currently claimed.
 
 ```bash
 BASE_WEIGHT=/path/to/stcmtrack_base.bin \

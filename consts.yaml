@@ -45,4 +45,3 @@ on_shared_file_system: false
 ANTIUAV410_PATH: '../antiuav410/test'
 ANTIUAV410_TRAIN_PATH: '../antiuav410/train'
 ANTIUAV410_VAL_PATH: '../antiuav410/val'
-# 其他原有路径可保留或注释掉
