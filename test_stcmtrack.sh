@@ -37,8 +37,8 @@ case "$EVAL_SCOPE" in
 esac
 printf 'Evaluation scope: %s\n' "$EVAL_SCOPE"
 
-BASE_WEIGHT="${BASE_WEIGHT:-$REPO_ROOT/weights/base_finetuning.bin}"
-LTCP_WEIGHT="${LTCP_WEIGHT:-$REPO_ROOT/weights/ltcp_epoch09_model_compat.bin}"
+BASE_WEIGHT="${BASE_WEIGHT:-$REPO_ROOT/weights/stcmtrack_base.bin}"
+LTCP_WEIGHT="${LTCP_WEIGHT:-$REPO_ROOT/weights/stcmtrack_ltcp.bin}"
 ANTIUAV_GT_DIR="${ANTIUAV_GT_DIR:-/root/lanyun-fs/antiuav410/test}"
 OUTPUT_ROOT="${OUTPUT_DIR:-$REPO_ROOT/output/stcmtrack_test_${EVAL_SCOPE}}"
 DEVICE_IDS="${DEVICE_IDS:-0}"

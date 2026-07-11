@@ -28,7 +28,7 @@ printf 'Using python3: %s\n' "$(command -v python3)"
 printf 'CONDA_DEFAULT_ENV: %s\n' "${CONDA_DEFAULT_ENV:-}"
 
 DEVICE_IDS="${DEVICE_IDS:-0}"
-BASE_WEIGHT="${BASE_WEIGHT:-$REPO_ROOT/weights/base_finetuning.bin}"
+BASE_WEIGHT="${BASE_WEIGHT:-$REPO_ROOT/weights/stcmtrack_base.bin}"
 OUTPUT_DIR="${OUTPUT_DIR:-$REPO_ROOT/output/stcmtrack_train}"
 
 printf 'REPO_ROOT: %s\n' "$REPO_ROOT"

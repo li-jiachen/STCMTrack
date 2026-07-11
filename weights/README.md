@@ -2,67 +2,71 @@
 
 This directory stores the checkpoint files required for STCMTrack inference and training.
 
-Large weight files are intentionally not committed to Git. Download them manually or fetch them from release artifacts, then place them at the paths expected by the scripts.
+Weight files are intentionally not committed to Git.
 
 By default:
 
-- `test_stcmtrack.sh` loads `weights/base_finetuning.bin` first, then loads `weights/ltcp_epoch09_model_compat.bin`.
-- `train_stcmtrack.sh` uses `weights/base_finetuning.bin` as the initialization checkpoint.
+- `test_stcmtrack.sh` loads `weights/stcmtrack_base.bin` first, then loads `weights/stcmtrack_ltcp.bin`.
+- `train_stcmtrack.sh` uses `weights/stcmtrack_base.bin` as the initialization checkpoint.
 
 ## Weight Files
 
 | File | Required by | Purpose | SHA256 | Notes |
 |---|---|---|---|---|
-| `weights/base_finetuning.bin` | `test_stcmtrack.sh`, `train_stcmtrack.sh` | Base STCMTrack/SPMTrack-compatible checkpoint | `71eb8f20cbdec8bf2dff5177806923eca0fa08b694c2b40cf5399f2d9ad2d2d0` | In the current development environment, this file is a symlink to `/root/lanyun-fs/fine-tuning-Base.bin`. For a fresh clone, place or symlink the downloaded base checkpoint at `weights/base_finetuning.bin`. |
-| `weights/ltcp_epoch09_model_compat.bin` | `test_stcmtrack.sh` | LTCP incremental checkpoint with compatible key names | `ed4e063bcac94e6fd98de14abb1416965f4a26ad92f482602234807228b291b7` | Created by renaming `ttcp.gate.weight` to `ltcp.gate.weight` and `ttcp.gate.bias` to `ltcp.gate.bias` from the original LTCP checkpoint. The original checkpoint was not modified. |
+| `weights/stcmtrack_base.bin` | `test_stcmtrack.sh`, `train_stcmtrack.sh` | Base initialization checkpoint | `71eb8f20cbdec8bf2dff5177806923eca0fa08b694c2b40cf5399f2d9ad2d2d0` | This checkpoint is publicly available in GitHub Release `v0.1.0`. |
+| `weights/stcmtrack_ltcp.bin` | `test_stcmtrack.sh` | LTCP incremental compatibility checkpoint | `ed4e063bcac94e6fd98de14abb1416965f4a26ad92f482602234807228b291b7` | This file only contains incremental parameters and is not yet publicly available. |
 
 ## How to Place the Weights
 
-Use placeholders for your own download locations:
+Base checkpoint download:
 
 ```bash
 mkdir -p weights
-
-wget -O weights/base_finetuning.bin <BASE_CHECKPOINT_URL>
-wget -O weights/ltcp_epoch09_model_compat.bin <LTCP_COMPAT_CHECKPOINT_URL>
-
-sha256sum weights/base_finetuning.bin
-sha256sum weights/ltcp_epoch09_model_compat.bin
+wget -O weights/stcmtrack_base.bin \
+  https://github.com/li-jiachen/STCMTrack/releases/download/v0.1.0/stcmtrack_base.bin
+sha256sum weights/stcmtrack_base.bin
 ```
 
-A symlink is also acceptable when the checkpoint files are stored outside the repository.
+LTCP checkpoint:
+
+```bash
+mkdir -p weights
+cp /path/to/stcmtrack_ltcp.bin weights/stcmtrack_ltcp.bin
+sha256sum weights/stcmtrack_ltcp.bin
+```
+
+A symlink is also acceptable when the checkpoint files are stored outside the repository:
+
+```bash
+ln -s /path/to/stcmtrack_base.bin weights/stcmtrack_base.bin
+ln -s /path/to/stcmtrack_ltcp.bin weights/stcmtrack_ltcp.bin
+```
 
 ## Environment Variable Overrides
 
 `test_stcmtrack.sh` supports these overrides:
 
-- `BASE_WEIGHT=/path/to/base.bin`
-- `LTCP_WEIGHT=/path/to/ltcp_compat.bin`
+- `BASE_WEIGHT=/path/to/stcmtrack_base.bin`
+- `LTCP_WEIGHT=/path/to/stcmtrack_ltcp.bin`
 - `DEVICE_IDS=0`
 - `EVAL_SCOPE=short` or `EVAL_SCOPE=full`
 
 Example:
 
 ```bash
-BASE_WEIGHT=/path/to/base_finetuning.bin \
-LTCP_WEIGHT=/path/to/ltcp_epoch09_model_compat.bin \
-DEVICE_IDS=0 \
-./test_stcmtrack.sh
+BASE_WEIGHT=/path/to/stcmtrack_base.bin LTCP_WEIGHT=/path/to/stcmtrack_ltcp.bin DEVICE_IDS=0 ./test_stcmtrack.sh
 ```
 
 `train_stcmtrack.sh` supports these overrides:
 
-- `BASE_WEIGHT=/path/to/base.bin`
+- `BASE_WEIGHT=/path/to/stcmtrack_base.bin`
 - `DEVICE_IDS=0`
 - `OUTPUT_DIR=/path/to/output`
 
 Example:
 
 ```bash
-BASE_WEIGHT=/path/to/base_finetuning.bin \
-DEVICE_IDS=0 \
-OUTPUT_DIR=/path/to/train_output \
-./train_stcmtrack.sh
+BASE_WEIGHT=/path/to/stcmtrack_base.bin DEVICE_IDS=0 OUTPUT_DIR=/path/to/train_output ./train_stcmtrack.sh
 ```
 
 ## Missing Keys

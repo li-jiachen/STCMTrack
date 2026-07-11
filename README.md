@@ -110,15 +110,17 @@ Checkpoint binaries are not committed to Git.
 Required files:
 
 ```text
-weights/base_finetuning.bin
-weights/ltcp_epoch09_model_compat.bin
+weights/stcmtrack_base.bin
+weights/stcmtrack_ltcp.bin
 ```
 
 See `weights/README.md` for SHA256 values and placement instructions.
 
 ```bash
-wget -O weights/base_finetuning.bin <BASE_CHECKPOINT_URL>
-wget -O weights/ltcp_epoch09_model_compat.bin <LTCP_COMPAT_CHECKPOINT_URL>
+wget -O weights/stcmtrack_base.bin \
+  https://github.com/li-jiachen/STCMTrack/releases/download/v0.1.0/stcmtrack_base.bin
+
+LTCP incremental checkpoint is not yet publicly available. After obtaining it, place the file at `weights/stcmtrack_ltcp.bin`.
 ```
 
 ### Evaluation
@@ -143,12 +145,13 @@ EVAL_SCOPE=full DEVICE_IDS=0 ./test_stcmtrack.sh
 DEVICE_IDS=0 ./train_stcmtrack.sh
 ```
 
-- Uses `weights/base_finetuning.bin` by default.
+- Uses `weights/stcmtrack_base.bin` by default.
 - Outputs to `output/stcmtrack_train`.
 - Training launcher is provided and still being cleaned up for release.
 
 ```bash
-BASE_WEIGHT=/path/to/base_finetuning.bin \
+BASE_WEIGHT=/path/to/stcmtrack_base.bin \
+LTCP_WEIGHT=/path/to/stcmtrack_ltcp.bin \
 OUTPUT_DIR=/path/to/train_output \
 DEVICE_IDS=0 \
 ./train_stcmtrack.sh
