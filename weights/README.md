@@ -13,8 +13,8 @@ By default:
 
 | File | Required by | Purpose | SHA256 | Notes |
 |---|---|---|---|---|
-| `weights/stcmtrack_base.bin` | `test_stcmtrack.sh`, `train_stcmtrack.sh` | Base initialization checkpoint | `71eb8f20cbdec8bf2dff5177806923eca0fa08b694c2b40cf5399f2d9ad2d2d0` | This checkpoint is publicly available in GitHub Release `v0.1.0`. |
-| `weights/stcmtrack_ltcp.bin` | `test_stcmtrack.sh` | LTCP incremental compatibility checkpoint | `ed4e063bcac94e6fd98de14abb1416965f4a26ad92f482602234807228b291b7` | This file only contains incremental parameters and is not yet publicly available. |
+| `weights/stcmtrack_base.bin` | `test_stcmtrack.sh`, `train_stcmtrack.sh` | Base initialization checkpoint | `71eb8f20cbdec8bf2dff5177806923eca0fa08b694c2b40cf5399f2d9ad2d2d0` | This checkpoint is publicly available in GitHub Release `v0.2.0`. |
+| `weights/stcmtrack_ltcp.bin` | `test_stcmtrack.sh` | LTCP incremental compatibility checkpoint | `ed4e063bcac94e6fd98de14abb1416965f4a26ad92f482602234807228b291b7` | This file only contains incremental parameters and is publicly available in GitHub Release `v0.2.0`. |
 
 ## How to Place the Weights
 
@@ -23,7 +23,7 @@ Base checkpoint download:
 ```bash
 mkdir -p weights
 wget -O weights/stcmtrack_base.bin \
-  https://github.com/li-jiachen/STCMTrack/releases/download/v0.1.0/stcmtrack_base.bin
+  https://github.com/li-jiachen/STCMTrack/releases/download/v0.2.0/stcmtrack_base.bin
 sha256sum weights/stcmtrack_base.bin
 ```
 
@@ -31,7 +31,8 @@ LTCP checkpoint:
 
 ```bash
 mkdir -p weights
-cp /path/to/stcmtrack_ltcp.bin weights/stcmtrack_ltcp.bin
+wget -O weights/stcmtrack_ltcp.bin \
+  https://github.com/li-jiachen/STCMTrack/releases/download/v0.2.0/stcmtrack_ltcp.bin
 sha256sum weights/stcmtrack_ltcp.bin
 ```
 

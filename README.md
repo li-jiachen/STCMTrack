@@ -7,7 +7,7 @@ This repository provides the released inference and evaluation pipeline, togethe
 ## News
 
 - Inference, evaluation, and training entry points are available.
-- The base checkpoint is available through GitHub Releases. The LTCP incremental checkpoint is not yet publicly available; see `weights/README.md` for its expected filename and checksum.
+- The base and LTCP incremental checkpoints are distributed through the `v0.2.0` GitHub Release. See `weights/README.md` for filenames, checksums, and loading notes.
 - Checkpoint files are not committed to Git. Please see `weights/README.md` for placement instructions.
 
 ### ⭐ Introduction
@@ -121,9 +121,10 @@ See `weights/README.md` for SHA256 values and placement instructions.
 
 ```bash
 wget -O weights/stcmtrack_base.bin \
-  https://github.com/li-jiachen/STCMTrack/releases/download/v0.1.0/stcmtrack_base.bin
+  https://github.com/li-jiachen/STCMTrack/releases/download/v0.2.0/stcmtrack_base.bin
 
-LTCP incremental checkpoint is not yet publicly available. After obtaining it, place the file at `weights/stcmtrack_ltcp.bin`.
+wget -O weights/stcmtrack_ltcp.bin \
+  https://github.com/li-jiachen/STCMTrack/releases/download/v0.2.0/stcmtrack_ltcp.bin
 ```
 
 ### Evaluation
