@@ -92,15 +92,15 @@ ANTIUAV410_VAL_PATH: '../antiuav410/val'
 Our current verified environment uses PyTorch 2.3.1 with CUDA 12.1.
 
 ```bash
-conda create -n stcmtrack python=3.10 -y
-conda activate stcmtrack
+conda create -n spmtrack python=3.10 -y
+conda activate spmtrack
 pip install -r requirements.txt
 ```
 
 The provided scripts default to `CONDA_ENV=spmtrack`. You can override it:
 
 ```bash
-CONDA_ENV=stcmtrack DEVICE_IDS=0 ./test_stcmtrack.sh
+CONDA_ENV=my_tracking_env DEVICE_IDS=0 ./test_stcmtrack.sh
 ```
 
 ### Model Weights

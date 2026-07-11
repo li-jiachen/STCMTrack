@@ -12,6 +12,8 @@ from pathlib import Path
 
 import numpy as np
 
+DEFAULT_GT_DIR = Path(__file__).resolve().parents[2] / "antiuav410" / "test"
+
 
 SUFFIXES = ["_train_newfix", "_test", "_train", "_val", "_train-new", "_newfix", "_new"]
 
@@ -352,7 +354,7 @@ def main() -> None:
     parser.add_argument(
         "--gt-dir",
         type=Path,
-        default=Path(os.environ.get("ANTIUAV_GT_DIR", "/root/lanyun-fs/antiuav410/test")),
+        default=Path(os.environ.get("ANTIUAV_GT_DIR", str(DEFAULT_GT_DIR))),
     )
     parser.add_argument("--sequence-csv", type=Path)
     parser.add_argument("--self-test", action="store_true")

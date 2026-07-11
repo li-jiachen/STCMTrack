@@ -5,20 +5,44 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$SCRIPT_DIR"
 cd "$REPO_ROOT"
 
-CONDA_SH_DEFAULT="/root/miniconda/etc/profile.d/conda.sh"
-CONDA_SH="${CONDA_SH:-$CONDA_SH_DEFAULT}"
+resolve_conda_sh() {
+    local conda_base=""
+
+    if [[ -n "${CONDA_SH:-}" ]]; then
+        if [[ -f "$CONDA_SH" ]]; then
+            printf '%s\n' "$CONDA_SH"
+            return 0
+        fi
+        echo "找不到 Conda 激活脚本: $CONDA_SH" >&2
+        return 1
+    fi
+
+    if [[ -n "${CONDA_EXE:-}" ]]; then
+        conda_base="$(cd "$(dirname "$CONDA_EXE")/.." && pwd)"
+    elif command -v conda >/dev/null 2>&1; then
+        conda_base="$(conda info --base)"
+    else
+        for candidate in "$HOME/miniconda" "$HOME/miniconda3" "$HOME/anaconda3"; do
+            if [[ -f "$candidate/etc/profile.d/conda.sh" ]]; then
+                conda_base="$candidate"
+                break
+            fi
+        done
+    fi
+
+    if [[ -n "$conda_base" && -f "$conda_base/etc/profile.d/conda.sh" ]]; then
+        printf '%s\n' "$conda_base/etc/profile.d/conda.sh"
+        return 0
+    fi
+
+    echo "找不到 Conda 激活脚本。请设置 CONDA_SH 或确保 conda 可用。" >&2
+    return 1
+}
+CONDA_SH="$(resolve_conda_sh)"
 CONDA_ENV="${CONDA_ENV:-spmtrack}"
 
-if [[ -f "$CONDA_SH" ]]; then
-    source "$CONDA_SH"
-    conda activate "$CONDA_ENV"
-elif [[ "$CONDA_SH" == "$CONDA_SH_DEFAULT" && -f /root/miniconda/bin/activate ]]; then
-    source /root/miniconda/bin/activate "$CONDA_ENV"
-else
-    echo "找不到 Conda 激活脚本: $CONDA_SH" >&2
-    echo "备用脚本也不可用: /root/miniconda/bin/activate" >&2
-    exit 1
-fi
+source "$CONDA_SH"
+conda activate "$CONDA_ENV"
 
 if ! command -v python3 >/dev/null 2>&1; then
     echo "Conda 环境激活后未找到 python3" >&2
