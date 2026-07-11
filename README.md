@@ -90,11 +90,13 @@ ANTIUAV410_VAL_PATH: '../antiuav410/val'
 
 ### Install the environment
 
-Our current verified environment uses PyTorch 2.3.1 with CUDA 12.1.
+Our current verified environment uses Python 3.11.2, PyTorch 2.3.1, torchvision 0.18.1, and CUDA 12.1.
 
 ```bash
-conda create -n spmtrack python=3.10 -y
+conda create -n spmtrack python=3.11 -y
 conda activate spmtrack
+pip install --index-url https://download.pytorch.org/whl/cu121 \
+  torch==2.3.1 torchvision==0.18.1
 pip install -r requirements.txt
 ```
 
