@@ -1,0 +1,43 @@
+# Confidence-Triggered Re-localization (CTR, Sec. 2.3): Motion Center Correction (MCC)
+# + Residual-Guided Target Correction (RGTC). Inference only, no trainable parameters.
+- path: "run.runner.test.evaluator.pipeline.ctr"
+  value:
+    enabled: true
+    mcc_enabled: true
+    rgtc_enabled: true
+    confidence_threshold: 0.40        # tau
+    # homography T_t shared by MCC and RGTC (ORB + Hamming matching + RANSAC)
+    orb_features: 800
+    max_matches: 80
+    min_matches: 8
+    min_inlier_ratio: 0.25
+    ransac_reproj_threshold: 2.0      # pixels
+    max_center_shift_ratio: 1.0
+    # RGTC foreground evidence M_t = M_t^mog2 U M_t^res (Eqs. 4-6)
+    foreground_mask_mode: "mog2_residual_union"
+    residual_mad_scale: 4.4478        # alpha in Eq. (5)
+    residual_threshold_min: 6.0
+    residual_threshold_max: 64.0
+    mog2_history: 80
+    mog2_var_threshold: 24.0
+    mog2_detect_shadows: true
+    morph_kernel_size: 3
+    morph_iterations: 1
+    # candidate area constraints relative to the previous target area
+    min_candidate_area: 4.0
+    min_candidate_area_ratio: 0.05
+    max_candidate_area_ratio: 25.0
+    # candidate selection
+    candidate_center_weight: 0.45
+    candidate_area_weight: 0.25
+    candidate_aspect_weight: 0.10
+    candidate_score_threshold: 0.10
+    print_summary: true
+- path: "run.data.eval.transform.with_full_template_image"
+  value: true
+- path: "logging.tags"
+  action: "append"
+  value: "ctr"
+- path: "name"
+  action: "append"
+  value: "-ctr"

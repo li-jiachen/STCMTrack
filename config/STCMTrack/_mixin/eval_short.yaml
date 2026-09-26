@@ -1,0 +1,17 @@
+- path: "run.data.eval.source.parameters.datasets.0.filters"
+  value:
+    - type: "range_selector"
+      parameters:
+        start: 0
+        stop: 4
+    - type: "length_limit"
+      parameters:
+        value: 200
+- path: "run.data.eval.batch_size"
+  value: 4
+- path: "logging.tags"
+  action: "append"
+  value: "eval_short"
+- path: "name"
+  action: "append"
+  value: "-short"

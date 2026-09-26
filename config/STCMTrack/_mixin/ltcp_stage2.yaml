@@ -1,0 +1,12 @@
+# Training stage 2: 20 epochs of LTCP training with all other parameters frozen.
+# Use together with the `ltcp` mixin and initialize from the stage-1 checkpoint.
+- path: "model.ltcp.train_only"
+  value: true
+- path: "run.num_epochs"
+  value: 20
+- path: "logging.tags"
+  action: "append"
+  value: "ltcp_stage2"
+- path: "name"
+  action: "append"
+  value: "-stage2"

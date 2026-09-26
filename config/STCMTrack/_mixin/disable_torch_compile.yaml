@@ -1,0 +1,10 @@
+- path: "run.runner.train.torch_compile.enabled"
+  value: false
+- path: "run.runner.test.inference_engine.torch_compile.enabled"
+  value: false
+- path: "logging.tags"
+  action: "append"
+  value: "disable_torch_compile"
+- path: "name"
+  action: "append"
+  value: "-disable-torch-compile"
