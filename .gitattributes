@@ -1,0 +1,11 @@
+# Keep Linux training scripts and reviewable patches usable after Windows checkout.
+* text=auto eol=lf
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.pdf binary
+*.bin binary
+*.pth binary
+*.pt binary
+*.safetensors binary
+*.zip binary

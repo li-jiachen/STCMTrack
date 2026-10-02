@@ -1,0 +1,140 @@
+{
+  "upstream_repository": "https://github.com/WenRuiCai/SPMTrack",
+  "upstream_commit": "c581fe27231f3e16c38578e47daddadfaf6ffd7d",
+  "upstream_commit_date": "Sun Oct 19 23:22:15 2025 +0800",
+  "license": "Apache-2.0",
+  "license_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+  "note": "The repository license file is byte-identical to the upstream license. Files below were read from the pinned commit; nothing was taken from a branch head.",
+  "files": [
+    {
+      "local": "trackit/models/methods/SPMTrack/modules/__init__.py",
+      "upstream": "trackit/models/methods/SPMTrack/modules/__init__.py",
+      "status": "verbatim",
+      "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "local": "trackit/models/methods/SPMTrack/modules/patch_embed.py",
+      "upstream": "trackit/models/methods/SPMTrack/modules/patch_embed.py",
+      "status": "verbatim",
+      "upstream_sha256": "4e34361c60884cf3f17c811bd458792ce88355435967c339c4550ba80a160f15"
+    },
+    {
+      "local": "trackit/models/methods/SPMTrack/modules/head/mlp.py",
+      "upstream": "trackit/models/methods/SPMTrack/modules/head/mlp.py",
+      "status": "verbatim",
+      "upstream_sha256": "9fb72b777fb183eb8e8251bb6660b391bfe95a3a171fd51bde71be2ece9680e9"
+    },
+    {
+      "local": "trackit/models/methods/SPMTrack/modules/tmoe/__init__.py",
+      "upstream": "trackit/models/methods/SPMTrack/modules/tmoe/__init__.py",
+      "status": "verbatim",
+      "upstream_sha256": "5e45984b02262ffdbce76340828a7c6286d2efd106f76d2e3a2d8ddbea1a2220"
+    },
+    {
+      "local": "trackit/models/methods/SPMTrack/modules/tmoe/merge.py",
+      "upstream": "trackit/models/methods/SPMTrack/modules/tmoe/merge.py",
+      "status": "verbatim",
+      "upstream_sha256": "c010a3c4bb13764f056284fd79e2554da82a58ed004258d1d6cec9b8fd66bc00"
+    },
+    {
+      "local": "trackit/models/methods/SPMTrack/sample_data_generator.py",
+      "upstream": "trackit/models/methods/SPMTrack/sample_data_generator.py",
+      "status": "verbatim",
+      "upstream_sha256": "e09245f9bb4ecbb640f78c6ddd6485ca1b96102149ad11c1bcfe437cb477c301"
+    },
+    {
+      "local": "trackit/runner/evaluation/distributed/tracker_evaluator/default/pipelines/spmtrack_one_stream/visualization.py",
+      "upstream": "trackit/runner/evaluation/distributed/tracker_evaluator/default/pipelines/one_stream/visualization.py",
+      "status": "verbatim",
+      "upstream_sha256": "10732f713f66c196dce776830b80442ad73dbc561f1208f94bd082aff4303bad"
+    },
+    {
+      "local": "trackit/models/methods/SPMTrack/modules/tmoe/apply.py",
+      "upstream": "trackit/models/methods/SPMTrack/modules/tmoe/apply.py",
+      "status": "modified",
+      "upstream_sha256": "a03728cc69dea60935f05b60dd8675da64fd53a5017b6435e386495816f69163",
+      "local_sha256": "0967e05c7ed47e9d2777f6892dc61a33bebb2811754c7fc6bed2491e7aa3cfb9",
+      "deviation": "find_all_frozen_nn_linear_names returns sorted(...) instead of list(set) so that the TMoE random initialization order does not depend on PYTHONHASHSEED."
+    },
+    {
+      "local": "trackit/models/methods/SPMTrack/SPMTrack.py",
+      "upstream": "trackit/models/methods/SPMTrack/SPMTrack.py",
+      "status": "ported",
+      "upstream_sha256": "e530c1ebe355dbe6f45d03770c3860a0defdb1c9b005522f764b90c8ec40cb06",
+      "deviation": "Forward computation unchanged. track_query / query_embed initialized (upstream: torch.empty); checkpoint validation before copying; STCMTrack checkpoints rejected; TMoE alpha mismatch is an error; marker _spmtrack_port_version written on save and required unless allow_unmarked_weights; unused _fusion omitted."
+    },
+    {
+      "local": "trackit/models/methods/SPMTrack/SPMTrack_inference.py",
+      "upstream": "trackit/models/methods/SPMTrack/SPMTrack_full_finetune.py",
+      "status": "ported",
+      "upstream_sha256": "ede1fc3cd2386bf66c6c6930e3a905479e7888f6d2be2846f51ba3f6348d5044",
+      "deviation": "Inherits the training model so TMoE is built once in the constructor (upstream applies it inside load_state_dict); all three templates and masks required (no silent substitution); query state released per sequence; dinov2_full_finetune not supported."
+    },
+    {
+      "local": "trackit/models/methods/SPMTrack/builder.py",
+      "upstream": "trackit/models/methods/SPMTrack/builder.py",
+      "status": "ported",
+      "upstream_sha256": "fa4b484be41ef97e07dd7805b71af157a81328fbf8ada123bd306ac540865226",
+      "deviation": "Only model type dinov2; model.ltcp is refused; allow_unmarked_weights passed through; new build string."
+    },
+    {
+      "local": "trackit/runner/evaluation/distributed/tracker_evaluator/default/pipelines/spmtrack_one_stream/__init__.py",
+      "upstream": "trackit/runner/evaluation/distributed/tracker_evaluator/default/pipelines/one_stream/__init__.py",
+      "status": "ported",
+      "upstream_sha256": "835adf2ec9beaf551f1b81a91575831f89642ff8cc03d9ee4a564606d20833a0",
+      "deviation": "Reference selection computed once from the memory length; template size and area factor from the config; invalid boxes do not create templates; memory reset on init and released at the end of the sequence; no segmentation component; non-finite outputs raise."
+    },
+    {
+      "local": "trackit/runner/evaluation/distributed/tracker_evaluator/default/pipelines/spmtrack_one_stream/builder.py",
+      "upstream": "trackit/runner/evaluation/distributed/tracker_evaluator/default/pipelines/one_stream/builder.py",
+      "status": "ported",
+      "upstream_sha256": "c433f05eb45e7378e0fce7a328454882c53bc22095aa13a2ce79abf0b8f48554",
+      "deviation": "Refuses pipeline.ctr and any plugin set other than the template mask plugin; no segmentation plugin."
+    },
+    {
+      "local": "trackit/runner/evaluation/distributed/tracker_evaluator/default/pipelines/spmtrack_one_stream/template_mask.py",
+      "upstream": "trackit/runner/evaluation/distributed/tracker_evaluator/default/pipelines/_common/template_foreground_indicating_mask_generation.py",
+      "status": "ported",
+      "upstream_sha256": "d15a4df1ffca03acd0ca07a47511f204857b12b8a9b3e45e85022202aa9b2f7a",
+      "deviation": "Device from the constructor (upstream: .cuda()); reads the reference selection and new templates from the main pipeline; masks reset on init and released at the end; no KeyError when a batch has no tracking task."
+    },
+    {
+      "local": "trackit/runner/evaluation/distributed/tracker_evaluator/components/post_process/spmtrack_box_with_score_map.py",
+      "upstream": "trackit/runner/evaluation/distributed/tracker_evaluator/components/post_process/box_with_score_map.py",
+      "status": "ported",
+      "upstream_sha256": "bdbc1b2c3cc0903b9ea3d95a9c3d14004cdea83b5af6d7c5a84c26d54bb14b16",
+      "deviation": "Separate class; the unused classification_score_with_penalty flag is dropped."
+    },
+    {
+      "local": "config/SPMTrack/run.yaml",
+      "upstream": "config/SPMTrack/run.yaml",
+      "status": "ported",
+      "upstream_sha256": "49c0aada77b97f5675d7ed3a4b0f4f972a1224779e2139f060157bbdbfd8a678",
+      "deviation": "Structure and inference settings kept. Anti-UAV410/Anti-UAV datasets, 80 epochs, batch 4, 2048/4096 samples per epoch, torch.compile off and efficiency assessment off follow this paper protocol instead of upstream (170 epochs, batch 128, GOT-10k/LaSOT/TrackingNet/COCO)."
+    },
+    {
+      "local": "config/SPMTrack/dinov2/config.yaml",
+      "upstream": "config/SPMTrack/dinov2/config.yaml",
+      "status": "ported",
+      "upstream_sha256": "75fd96dedff3acc3eb54321c6a72fc55691b00953c7b9e48e9065f6ad454e4f2",
+      "deviation": "Adds model.allow_unmarked_weights (default false)."
+    }
+  ],
+  "not_ported": [
+    "SPMTrack_full_finetune.py as a model type (dinov2_full_finetune): the upstream builder cannot construct it",
+    "modules/dinov2_adapter.py, dinov2_vpt_block.py, eva.py, ia3, mixformer_attn.py, head/conv.py, head/ostrack.py",
+    "other upstream configs (GOT-10k, LaSOT, TrackingNet, large / giant backbones, VOT, SAM segmentation)",
+    "the LaSOT-specific reference rule (dataset_name == LaSOT and B-378): irrelevant to Anti-UAV"
+  ],
+  "known_upstream_issues_handled": [
+    "track_query and query_embed are torch.empty (undefined memory); the upstream comment says training sometimes does not converge",
+    "inference load_state_dict deletes expert_alpha / use_rsexpert unconditionally (KeyError) and ignores the stored alpha",
+    "inference model applies TMoE inside load_state_dict, wrapping the layers again when the cached instance is refreshed",
+    "SPMTrack_full_finetune.forward_tracking carries a \"has a bug\" comment and silently substitutes missing templates",
+    "builder branch dinov2_full_finetune calls the TMoE class without the TMoE arguments",
+    "pipeline never releases memory_frames / memory_masks of finished sequences; mask plugin hard-codes .cuda()",
+    "pipeline indexes context.input_data.tasks[i] with the position of a tracking task",
+    "mask plugin on_tracked raises KeyError when a batch contains no tracking task",
+    "TMoE target modules are collected with list(set(...)), so the initialization order depends on PYTHONHASHSEED"
+  ]
+}

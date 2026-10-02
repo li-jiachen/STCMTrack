@@ -1,0 +1,10 @@
+# Ablation (Table 2): disable Motion Center Correction, i.e. do not re-center the search crop.
+# RGTC still estimates T_t for frame alignment and the motion-corrected reference center.
+- path: "run.runner.test.evaluator.pipeline.ctr.mcc_enabled"
+  value: false
+- path: "logging.tags"
+  action: "append"
+  value: "ctr_no_mcc"
+- path: "name"
+  action: "append"
+  value: "-no-mcc"
