@@ -113,9 +113,62 @@ def config_facts(config):
         'iou_aware_classification': criteria['classification']['iou_aware_classification_score'],
         'stage1_epochs': config['run']['num_epochs'],
         'paper_settings': paper_settings(config),
+        'augmentation_target_problems': augmentation_target_problems(config),
         'full_template_inputs': {task: bool(config['run']['data'][task]['transform'].get(
             'with_full_template_image', False)) for task in ('test', 'eval')},
     }
+
+
+def augmentation_target_problems(config):
+    """A shared augmentation must cover every input of its model, even when counts differ."""
+    found = []
+    for task in ('train', 'val'):
+        data = config['run']['data'][task]
+        positive = data['siamese_training_pair_sampling']['positive_sample']
+        expected = {f'template_{index}' for index in range(positive['num_template_frames'])} | {
+            f'search_region_{index}' for index in range(positive['num_search_frames'])}
+        for augmentation in data['transform'].get('augmentation', []):
+            targets = augmentation.get('target', [])
+            if set(targets) != expected or len(targets) != len(expected):
+                found.append(f'{task}: {augmentation["type"]} must target every template and search input once')
+    return found
+
+
+def training_data_settings(config):
+    """Compare external training conditions without equating the models' temporal inputs."""
+    settings = {}
+    for task in ('train', 'val'):
+        data = copy.deepcopy(config['run']['data'][task])
+        data.pop('siamese_training_pair_sampling')
+        transform = data['transform']
+        transform.setdefault('temporal_consistent_crops', False)
+        for augmentation in transform.get('augmentation', []):
+            # Targets are checked against each model's actual input counts separately.
+            augmentation.pop('target', None)
+            augmentation.setdefault('joint', True)
+        settings[task] = data
+    return settings
+
+
+def evaluation_settings(config):
+    """Shared crop, data and engine settings; pipeline/post-process classes stay independent."""
+    test = config['run']['runner']['test']
+    pipeline = test['evaluator']['pipeline']
+    cropping = copy.deepcopy(pipeline['search_region_cropping'])
+    minimum = cropping.get('min_object_size', 1.)
+    cropping['min_object_size'] = [float(value) for value in minimum] if isinstance(minimum, (list, tuple)) \
+        else [float(minimum), float(minimum)]
+    data_settings = {}
+    for task in ('test', 'eval'):
+        if task not in config['run']['data']:
+            continue
+        data = copy.deepcopy(config['run']['data'][task])
+        # Full-frame inputs are needed by MCC/RGTC, rather than an evaluation protocol difference.
+        data['transform'].pop('with_full_template_image', None)
+        data_settings[task] = data
+    return {'data': data_settings, 'inference_engine': copy.deepcopy(test['inference_engine']),
+            'search_region_cropping': cropping,
+            'window_penalty': pipeline['post_process']['window_penalty']}
 
 
 def paper_settings(config):
@@ -132,9 +185,15 @@ def paper_settings(config):
         'template_size': config['common']['template_size'],
         'search_region_size': config['common']['search_region_size'],
         'response_map_size': config['common']['response_map_size'],
+        'common_inputs': copy.deepcopy(config['common']),
+        'tmoe': copy.deepcopy(config['model']['tmoe']),
         'stage1_epochs': config['run']['num_epochs'],
         'optimizer': copy.deepcopy(optimization['optimizer']),
         'scheduler': copy.deepcopy(optimization['lr_scheduler']),
+        'optimization': copy.deepcopy(optimization),
+        'torch_compile': copy.deepcopy(config['run']['runner']['train']['torch_compile']),
+        'training_data': training_data_settings(config),
+        'evaluation': evaluation_settings(config),
         'criteria': copy.deepcopy(criteria),
         'metric_handlers': {
             task: [handler['type'] for handler in config['run']['data'][task][
@@ -441,6 +500,7 @@ def compute(dataset='antiuav410'):
         pipeline = resolve_pipeline(facts['pipeline_type'])
         rows[name] = {**info, **facts, **settings_facts(config),
                       'eval_shared_settings_sha256': settings_facts(eval_config)['shared_settings_sha256'],
+                      'eval_public_settings_sha256': fingerprint(evaluation_settings(eval_config)),
                       'model': model, 'pipeline': pipeline}
     return rows
 
@@ -450,6 +510,7 @@ def problems(rows):
     if set(rows) != set(COMPONENTS):
         found.append(f'Expected exactly the eight Table 2 variants, got {sorted(rows)}')
     for name, row in rows.items():
+        found.extend(f'{name}: {problem}' for problem in row['augmentation_target_problems'])
         if row['method'] != row['config_type']:
             found.append(f'{name}: script method {row["method"]} but config type {row["config_type"]}')
         if row['script_use_ltcp'] != row['ltcp']:
@@ -509,6 +570,8 @@ def problems(rows):
         for name, row in rows.items():
             if row['paper_settings'] != reference['paper_settings']:
                 found.append(f'{name}: shared public settings differ from ltcp')
+            if row['eval_public_settings_sha256'] != reference['eval_public_settings_sha256']:
+                found.append(f'{name}: shared evaluation settings differ from ltcp')
             if row['model']['heads'] != reference['model']['heads'] or row['model'][
                     'head_definitions_sha256'] != reference['model']['head_definitions_sha256']:
                 found.append(f'{name}: prediction head construction differs from ltcp')
@@ -539,7 +602,7 @@ def markdown(rows):
     out = ['| VARIANT | method | model class (train / inference) | LTCP | MCC | RGTC | train templates / search frames | '
            'post-process | eval pipeline | LTCP/CTR code reachable |',
            '|---|---|---|:---:|:---:|:---:|---|---|---|---|']
-    mark = lambda value: '✓' if value else '×'
+    mark = lambda value: 'on' if value else 'off'
     for name, row in rows.items():
         classes = row['model']['classes']
         train_cls = next(c for c in classes if 'Inference' not in c)
@@ -552,7 +615,8 @@ def markdown(rows):
                    f"{mark(row['rgtc'])} | {row['train_templates']} / {row['train_search_frames']} "
                    f"({row['train_sample_mode']}) | `{row['post_process']}` (Hann {row['window_penalty']}) | "
                    f"`{row['pipeline']['main_class']}` | {reachable} |")
-    out.append('\nRow 1 is independent SPMTrack; only rows 2-8 share the complete non-component configuration.')
+    out.append('\nAll eight rows share the external training and evaluation settings. '
+               'Row 1 is independent SPMTrack; only rows 2-8 share the complete non-component configuration.')
     out.extend(f'- {conflict}' for conflict in ablation_conflicts(rows))
     return '\n'.join(out)
 

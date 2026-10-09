@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 from typing import Tuple
-from . import TrackerOutputPostProcess
+from . import TrackerOutputPostProcess, validate_dense_tracking_output
 
 
 class PostProcessing_BoxWithScoreMap(TrackerOutputPostProcess):
@@ -28,6 +28,7 @@ class PostProcessing_BoxWithScoreMap(TrackerOutputPostProcess):
             del self._window
 
     def __call__(self, output):
+        validate_dense_tracking_output(output)
         # shape: (N, H, W), (N, H, W, 4)
         dense_score_map = output['score_map'].detach().float().sigmoid()
         dense_bbox = output['boxes'].detach().float()

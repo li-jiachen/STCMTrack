@@ -24,7 +24,7 @@ Training uses the same encoder, LTCP module and heads: `STCMTrack_DINOv2.forward
 |---|---|---|
 | Backbone | DINOv2-pretrained ViT-B/14, 12 blocks, D = 768, kept frozen | `model.backbone` |
 | Template / search input | 196 × 196 / 378 × 378 | `common.template_size`, `common.search_region_size` |
-| Template / search crop | area factor 2 / area factor 5 | `template_area_factor`, `search_region_cropping.area_factor` |
+| Template / search crop | area factor 2 / area factor 5; evaluation minimum crop object size 1 pixel | `template_area_factor`, `search_region_cropping.area_factor`, `search_region_cropping.min_object_size` (default 1) |
 | TMoE adapters | r = 64, α = 64, 4 routed experts, on the `q`, `k`, `v`, `proj`, `fc1` and `fc2` linear layers of every block | `model.tmoe` |
 | Token-type embeddings | three embeddings: template background, template foreground (tokens inside the initial box), search | – |
 | Target state token | one learned query (`track_query` + `query_embed`) encoded jointly with the template and the search tokens | – |
@@ -67,7 +67,7 @@ Fallbacks:
 
 The ablation mixins `ctr_no_mcc` and `ctr_no_rgtc` switch off one branch. Without MCC the search crop is not re-centered, while RGTC still uses the homography for the frame alignment and the motion-corrected reference center. Without RGTC low-confidence predictions are kept.
 
-The eight variants follow Table 2: `VARIANT=baseline` selects independent SPMTrack for row 1; rows 2–8 use STCMTrack and share its base weights and settings. Data, optimizer and loss settings are aligned between the models. The backbone and MLP head architectures are the same, but SPMTrack retains its template and query computations, sampling and post-processing. These differences limit the paper's statement that all other settings are shared; see [ABLATION.md](ABLATION.md).
+The eight variants follow Table 2: `VARIANT=baseline` selects independent SPMTrack for row 1; rows 2–8 use STCMTrack and share its base weights and settings. Both models share data splits, backbone and MLP head architectures, crop settings, joint augmentation, optimizer, schedule, loss conventions, budget and metrics. Hann-window post-processing is disabled for both. SPMTrack retains its three-template, propagated-query, interval-sampling and online-template mechanisms; these model-specific computations alone do not contradict the shared-settings statement. Historical experiment settings and published scores remain unverified; see [ABLATION.md](ABLATION.md).
 
 ## 3. Training (Sec. 3.1)
 
@@ -99,10 +99,12 @@ MCC and RGTC are not used during training. Checkpoints are written every 20 epoc
 | Absent targets | frames with `exist = 0` are excluded from all metrics |
 | Initialization frame | included |
 | Aggregation | unweighted mean over the sequences |
-| Invalid predictions | a box with non-positive size on a frame with a present target counts as a failure; non-finite predictions are errors |
+| Invalid predictions | non-finite model scores or boxes are errors; a finite final box with non-positive size on a frame with a present target counts as a failure |
 | Coverage | a full evaluation requires every sequence of the split with matching frame counts |
 
 These conventions are written into every JSON report (field `protocol`). The two internal one-pass-evaluation handlers, `tools/evaluate_antiuav_iou_p20.py` and the SPMTrack baseline all call `trackit/core/evaluation/antiuav.py`. Predictions are exported to `results.zip` with one `<sequence>.txt` file per sequence; it has one `x y w h` line per frame (17 significant digits), and the first line is the initialization box.
+
+Both tracking pipelines reject NaN/Inf rather than replacing predictions with an earlier box. A finite but geometrically invalid final box is submitted unchanged and scored as a failure; the crop provider keeps its previous valid internal state for the next frame. For STCMTrack, a valid RGTC candidate may still correct a finite tracker box before the final prediction is submitted.
 
 ## 5. Box formats
 

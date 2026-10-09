@@ -44,12 +44,14 @@ results.zip
 /datasets/
 
 /weights/*.bin
+/weights/**/*.bin
 /weights/*.pth
 /weights/*.pt
 /weights/*.ckpt
 /weights/*.safetensors
 /weights/*.tar
 /weights/*.manifest.json
+/weights/**/*.manifest.json
 !/weights/README.md
 !/weights/.gitkeep
 *.pth

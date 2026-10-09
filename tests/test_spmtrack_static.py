@@ -83,13 +83,13 @@ class VariantMappingTests(unittest.TestCase):
         self.assertEqual(baseline['model']['classes'], ['SPMTrackInference_DINOv2', 'SPMTrack_DINOv2'])
         self.assertEqual((baseline['train_templates'], baseline['train_search_frames']), (3, 2))
         self.assertEqual((baseline['ltcp'], baseline['mcc'], baseline['rgtc']), (False, False, False))
-        self.assertEqual(baseline['window_penalty'], .45)
+        self.assertEqual(baseline['window_penalty'], 0.)
         for name in mapping.STCM_VARIANTS:
             self.assertEqual(rows[name]['model']['classes'], ['STCMTrackInference_DINOv2', 'STCMTrack_DINOv2'])
             self.assertEqual((rows[name]['train_templates'], rows[name]['train_search_frames']), (1, 3))
         self.assertNotEqual(baseline['shared_settings_sha256'], rows['ltcp']['shared_settings_sha256'])
         self.assertTrue(any('train_templates' in conflict for conflict in mapping.ablation_conflicts(rows)))
-        self.assertTrue(any('window_penalty' in conflict for conflict in mapping.ablation_conflicts(rows)))
+        self.assertFalse(any('window_penalty' in conflict for conflict in mapping.ablation_conflicts(rows)))
 
     def test_check_rejects_extra_variants_and_a_relabelled_stcm_baseline(self):
         rows = mapping.compute('antiuav410')
@@ -164,6 +164,32 @@ class VariantMappingTests(unittest.TestCase):
         rows = mapping.compute('antiuav410')
         rows['ltcp']['full_template_inputs']['test'] = True
         self.assertTrue(any('full-template-image inputs' in problem for problem in mapping.problems(rows)))
+
+    def test_check_rejects_baseline_label_augmentation_and_crop_drift(self):
+        changes = (
+            ('labels', lambda cfg: cfg['run']['data']['train']['transform']['plugin'][0].update(
+                positive_assignment='box', center_positive_radius=1)),
+            ('augmentation', lambda cfg: cfg['run']['data']['train']['transform']['augmentation'][0].update(joint=False)),
+            ('crop', lambda cfg: cfg['run']['runner']['test']['evaluator']['pipeline'][
+                'search_region_cropping'].update(min_object_size=10)),
+        )
+        for label, change in changes:
+            with self.subTest(setting=label):
+                cfg = self.ablation_config('baseline')
+                change(cfg)
+                rows = mapping.compute('antiuav410')
+                rows['baseline'].update(mapping.config_facts(cfg))
+                self.assertTrue(any('shared public settings differ' in problem for problem in mapping.problems(rows)))
+
+    def test_check_rejects_augmentation_that_misses_a_models_input(self):
+        for name in ('baseline', 'full'):
+            with self.subTest(variant=name):
+                cfg = self.ablation_config(name)
+                cfg['run']['data']['train']['transform']['augmentation'][0]['target'].pop()
+                rows = mapping.compute('antiuav410')
+                rows[name].update(mapping.config_facts(cfg))
+                self.assertTrue(any('must target every template and search input' in problem
+                                    for problem in mapping.problems(rows)))
 
     def test_shared_mixins_are_identical_copies(self):
         for name in ('disable_torch_compile', 'evaluation', 'eval_short', 'dataset_antiuav300'):
@@ -250,20 +276,22 @@ class SPMTrackConfigTests(unittest.TestCase):
                           positive['MAX_SAMPLE_INTERVAL']), ('interval', 3, 2, 400))
         flip, color, deit = train['transform']['augmentation']
         self.assertEqual(flip['target'], ['template_0', 'template_1', 'template_2', 'search_region_0', 'search_region_1'])
-        self.assertFalse(flip['joint'])
-        self.assertFalse(color['joint'])
+        self.assertTrue(flip['joint'])
+        self.assertTrue(color['joint'])
         self.assertTrue(deit['joint'])
-        self.assertNotIn('temporal_consistent_crops', train['transform'])
+        self.assertTrue(train['transform']['temporal_consistent_crops'])
+        label_plugin = train['transform']['plugin'][0]
+        self.assertEqual((label_plugin['positive_assignment'], label_plugin['center_positive_radius']), ('center', 0))
         criteria = self.cfg['run']['runner']['train']['criteria']
         self.assertEqual(criteria.get('frame_loss_reduction', 'mean'), 'mean')
         self.assertFalse(criteria['classification']['iou_aware_classification_score'])
 
-    def test_evaluation_follows_upstream_inference(self):
+    def test_evaluation_keeps_the_independent_model_with_shared_crop_and_window(self):
         pipeline = self.cfg['run']['runner']['test']['evaluator']['pipeline']
         self.assertEqual(pipeline['type'], 'spmtrack_one_stream_tracker')
         self.assertNotIn('ctr', pipeline)
-        self.assertEqual(pipeline['search_region_cropping'], {'type': 'simple', 'min_object_size': 10, 'area_factor': 5.0})
-        self.assertEqual(pipeline['post_process'], {'type': 'box_with_score_map_spmtrack', 'window_penalty': 0.45})
+        self.assertEqual(pipeline['search_region_cropping'], {'type': 'simple', 'min_object_size': 1, 'area_factor': 5.0})
+        self.assertEqual(pipeline['post_process'], {'type': 'box_with_score_map_spmtrack', 'window_penalty': 0.0})
         self.assertEqual(pipeline['online_template']['area_factor'], 2.0)
         self.assertEqual([p['type'] for p in pipeline['plugin']], ['template_foreground_indicating_mask_generation'])
 

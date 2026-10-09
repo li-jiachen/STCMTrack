@@ -2,7 +2,7 @@ from typing import Dict, Tuple, Callable, Any, Optional, List, TYPE_CHECKING
 import numpy as np
 import torch
 from dataclasses import dataclass, field
-from trackit.core.operator.numpy.bbox.utility.image import bbox_clip_to_image_boundary, bbox_clip_to_image_boundary_
+from trackit.core.operator.numpy.bbox.utility.image import bbox_clip_to_image_boundary_
 from trackit.core.operator.numpy.bbox.validity import bbox_is_valid
 from trackit.core.utils.siamfc_cropping import apply_siamfc_cropping, apply_siamfc_cropping_to_boxes, \
     reverse_siamfc_cropping_params, apply_siamfc_cropping_subpixel, scale_siamfc_cropping_params
@@ -22,7 +22,6 @@ from ... import TrackerEvaluationPipeline
 class _LocalContext:
     reset_frame_indices: List[int] = field(default_factory=list)
     siamfc_cropping_params_provider: Optional[CroppingParameterProvider] = None
-    last_valid_bbox: Optional[np.ndarray] = None
 
 
 class OneStreamTracker_Evaluation_MainPipeline(TrackerEvaluationPipeline):
@@ -104,7 +103,6 @@ class OneStreamTracker_Evaluation_MainPipeline(TrackerEvaluationPipeline):
                 cropping_params_provider.initialize(init_context.gt_bbox)
                 task_context = self.all_tracking_task_local_contexts[task.id]
                 task_context.siamfc_cropping_params_provider = cropping_params_provider
-                task_context.last_valid_bbox = init_context.gt_bbox.astype(np.float64).copy()
                 task_context.reset_frame_indices.append(init_context.frame_index)
                 if self.ctr is not None:
                     self.ctr.reset(task.id, init_context.input_data.get('image'), init_context.gt_bbox)
@@ -184,45 +182,21 @@ class OneStreamTracker_Evaluation_MainPipeline(TrackerEvaluationPipeline):
         finite_bbox = torch.all(torch.isfinite(all_predicted_bounding_box), dim=1)
         finite_output = torch.logical_and(finite_score, finite_bbox)
         if not torch.all(finite_output):
-            invalid_indexes = torch.nonzero(~finite_output, as_tuple=False).flatten().tolist()
-            for invalid_index in invalid_indexes:
-                self.invalid_tracking_output_count += 1
-                if self.invalid_tracking_output_count <= 5:
-                    print(f'warning: non-finite tracker output for task {task_ids[invalid_index]}: '
-                          f'score={all_predicted_score[invalid_index].item()} '
-                          f'box={all_predicted_bounding_box[invalid_index].tolist()}; '
-                          f'reuse previous bbox',
-                          flush=True)
-            all_predicted_score = torch.nan_to_num(all_predicted_score, nan=0.0, posinf=0.0, neginf=0.0)
-            all_predicted_bounding_box = torch.nan_to_num(
-                all_predicted_bounding_box, nan=0.0, posinf=0.0, neginf=0.0)
+            invalid_index = torch.nonzero(~finite_output, as_tuple=False).flatten()[0].item()
+            raise ValueError(f'non-finite tracker prediction for task {task_ids[invalid_index]}: '
+                             f'score={all_predicted_score[invalid_index].item()} '
+                             f'box={all_predicted_bounding_box[invalid_index].tolist()}')
 
         all_predicted_bounding_box = all_predicted_bounding_box.to(torch.float64)
 
         all_predicted_score = all_predicted_score.numpy()
         all_predicted_bounding_box = all_predicted_bounding_box.numpy()
-        finite_output = finite_output.numpy()
 
         all_predicted_bounding_box_on_full_search_image = apply_siamfc_cropping_to_boxes(
             all_predicted_bounding_box, reverse_siamfc_cropping_params(x_cropping_params))
-        for index, (predicted_bounding_box_on_full_search_image, image_size, task_id) in enumerate(zip(
-                all_predicted_bounding_box_on_full_search_image, x_frame_sizes, task_ids)):
+        for predicted_bounding_box_on_full_search_image, image_size in zip(
+                all_predicted_bounding_box_on_full_search_image, x_frame_sizes):
             bbox_clip_to_image_boundary_(predicted_bounding_box_on_full_search_image, image_size)
-            if not finite_output[index] or not bbox_is_valid(predicted_bounding_box_on_full_search_image):
-                if finite_output[index]:
-                    self.invalid_tracking_output_count += 1
-                local_task_context = self.all_tracking_task_local_contexts[task_id]
-                fallback_bbox = local_task_context.last_valid_bbox
-                if fallback_bbox is None or not bbox_is_valid(fallback_bbox):
-                    fallback_bbox = np.array([0.0, 0.0, float(image_size[0]), float(image_size[1])],
-                                             dtype=np.float64)
-                fallback_bbox = bbox_clip_to_image_boundary(fallback_bbox, image_size)
-                if self.invalid_tracking_output_count <= 5:
-                    print(f'warning: invalid tracker bbox for task {task_id}: '
-                          f'{predicted_bounding_box_on_full_search_image}; '
-                          f'reuse {fallback_bbox}',
-                          flush=True)
-                all_predicted_bounding_box_on_full_search_image[index] = fallback_bbox
 
         tracking_images = {
             task.id: task.tracker_do_tracking_context.input_data['image']
@@ -237,10 +211,8 @@ class OneStreamTracker_Evaluation_MainPipeline(TrackerEvaluationPipeline):
                     all_predicted_bounding_box_on_full_search_image[index],
                     all_predicted_score[index].item(), image_size)
                 all_predicted_bounding_box_on_full_search_image[index] = corrected_bbox
-                if not bbox_is_valid(all_predicted_bounding_box_on_full_search_image[index]):
-                    local_task_context = self.all_tracking_task_local_contexts[task_id]
-                    all_predicted_bounding_box_on_full_search_image[index] = bbox_clip_to_image_boundary(
-                        local_task_context.last_valid_bbox, image_size)
+                if not np.all(np.isfinite(corrected_bbox)):
+                    raise ValueError(f'non-finite corrected tracker prediction for task {task_id}')
 
         all_predicted_mask_on_full_search_image = None
         if all_predicted_mask is not None:
@@ -274,8 +246,12 @@ class OneStreamTracker_Evaluation_MainPipeline(TrackerEvaluationPipeline):
             local_task_context.siamfc_cropping_params_provider.update(predicted_score,
                                                                       predicted_bounding_box_on_full_search_image,
                                                                       image_size)
-            if bbox_is_valid(predicted_bounding_box_on_full_search_image):
-                local_task_context.last_valid_bbox = predicted_bounding_box_on_full_search_image.copy()
+            if not bbox_is_valid(predicted_bounding_box_on_full_search_image):
+                self.invalid_tracking_output_count += 1
+                if self.invalid_tracking_output_count <= 5:
+                    print(f'warning: invalid final tracker bbox for task {task_id}: '
+                          f'{predicted_bounding_box_on_full_search_image}; '
+                          f'submit failed prediction and keep the valid crop state', flush=True)
             if self.ctr is not None:
                 self.ctr.update(task_id, tracking_images[task_id],
                                 predicted_bounding_box_on_full_search_image, image_size)

@@ -1,8 +1,8 @@
 # SPMTrack baseline run configuration (independent of config/STCMTrack/run.yaml).
 #
-# Structure and inference logic: official SPMTrack, github.com/WenRuiCai/SPMTrack,
+# Model structure and temporal inference logic: official SPMTrack, github.com/WenRuiCai/SPMTrack,
 #   config/SPMTrack/run.yaml @ c581fe27231f3e16c38578e47daddadfaf6ffd7d  (three templates, two search
-#   frames, "interval" pair sampling, per-image flip/color augmentation, Hann window 0.45, min object size 10).
+#   frames, "interval" pair sampling, propagated query and online template memory).
 # Data, training budget and evaluation shared with STCMTrack (see docs/SPMTRACK_BASELINE.md; these settings are
 # not taken from upstream):
 #   * datasets: the Anti-UAV410 / Anti-UAV splits of config/_dataset/*.yaml; upstream's GOT-10k / LaSOT /
@@ -11,6 +11,8 @@
 #   * shared implementation choices not specified in the paper: global batch 4, 2048 train / 4096 val
 #     samples per epoch, no warm-up or per-parameter decay overrides, hard center targets and mean frame
 #     loss; these are fixed defaults for the public implementation;
+#   * joint flip/color augmentation and temporally consistent search-crop jitter;
+#   * evaluation: no Hann penalty, search crop area factor 5 and min object size 1;
 #   * torch.compile and efficiency assessment off;
 #   * evaluation: the shared one_pass_evaluation_compatible handler and PyTracking export (metrics of Sec. 3.2).
 
@@ -118,6 +120,7 @@ data:
 
     transform: &transform_options
       type: "default"
+      temporal_consistent_crops: true
 
       SiamFC_cropping:
         template:
@@ -132,18 +135,20 @@ data:
         - type: "horizontal_flip"
           target: ["template_0", "template_1", "template_2", "search_region_0", "search_region_1"]
           probability: 0.5
-          joint: false
+          joint: true
         - type: "color_jitter"
           target: ["template_0", "template_1", "template_2", "search_region_0", "search_region_1"]
           brightness: 0.4
           contrast: 0.4
           saturation: 0.4
-          joint: false
+          joint: true
         - type: "DeiT_3_aug"
           target: ["template_0", "template_1", "template_2", "search_region_0", "search_region_1"]
           joint: true
       plugin:
         - type: "box_with_score_map_label_generation"
+          positive_assignment: "center"
+          center_positive_radius: 0
         - type: "template_foreground_indicating_mask_generation"
 
       visualize: false
@@ -289,13 +294,13 @@ runner:
         type: "spmtrack_one_stream_tracker"
         search_region_cropping:
           type: "simple"
-          min_object_size: 10
+          min_object_size: 1
           area_factor: 5.0
         online_template:
           area_factor: 2.0
         post_process:
           type: "box_with_score_map_spmtrack"
-          window_penalty: 0.45
+          window_penalty: 0.0
         visualization: false
 
         plugin:

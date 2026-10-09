@@ -16,8 +16,8 @@ The model follows [WenRuiCai/SPMTrack](https://github.com/WenRuiCai/SPMTrack), c
 - DINOv2 ViT-B/14 with frozen pretrained parameters and TMoE adapters; template 196 × 196, search 378 × 378; two MLP prediction heads.
 - Three templates: the first-frame template and two historical references. Templates are updated from predicted boxes after tracking each frame.
 - The query output of the previous frame is propagated into the next joint encoding. Search tokens are reweighted by their dot product with the current query output before entering the heads.
-- Training samples contain three templates and two search frames, using interval sampling and per-image flip/color augmentation.
-- Evaluation keeps the original Hann-window weight 0.45, search area factor 5 and minimum target size 10 pixels.
+- Training samples contain three templates and two search frames, using interval sampling. Crop jitter and augmentation are applied jointly, as in the public STCMTrack configuration.
+- Evaluation uses the shared search area factor 5, minimum crop object size 1 pixel and Hann-window weight 0. The original upstream Hann weight 0.45 is not used by these paper-aligned public configurations.
 
 The forward model retains the original computation. The port initializes learned queries explicitly, builds TMoE once, releases per-sequence memory and validates checkpoints before loading.
 
@@ -25,7 +25,7 @@ The forward model retains the original computation. The port initializes learned
 
 The paper specifies the data splits, input sizes, 80-epoch base training budget, AdamW with learning rate 1e-4 and weight decay 0.1, cosine scheduling, equally weighted BCE/GIoU losses and shared evaluation metrics. The implementation additionally uses global batch size 4, 2048 training and 4096 validation samples per epoch, cosine decay to zero without warm-up, binary center targets and averaged search-frame losses. These are fixed public defaults, rather than claims about settings omitted from the paper.
 
-These common settings replace the upstream training configuration. The SPMTrack template, query, sampling and inference conventions remain distinct from STCMTrack. See [ABLATION.md](ABLATION.md) for the resulting limitation of the paper's statement that all remaining settings are shared. Retrain and evaluate this configuration to obtain new baseline results.
+These common settings replace the upstream experiment configuration. The SPMTrack template, query, interval-sampling and online-template mechanisms remain part of the independent model. They differ from STCMTrack's internal computation without implying that common experiment settings must differ. See [ABLATION.md](ABLATION.md). Retrain and evaluate this configuration to obtain new baseline results; historical configuration and prediction files are needed to verify the paper's original baseline score.
 
 ## Checkpoints
 

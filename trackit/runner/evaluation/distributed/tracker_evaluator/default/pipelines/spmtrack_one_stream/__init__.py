@@ -221,9 +221,10 @@ class SPMTrackOneStream_Evaluation_MainPipeline(TrackerEvaluationPipeline):
         assert len(task_ids) == len(all_predicted_score) == len(all_predicted_bounding_box)
 
         all_predicted_score = all_predicted_score.cpu()
-        assert torch.all(torch.isfinite(all_predicted_score))
         all_predicted_bounding_box = all_predicted_bounding_box.cpu()
-        assert torch.all(torch.isfinite(all_predicted_bounding_box))
+        if not torch.all(torch.isfinite(all_predicted_score)) or not torch.all(
+                torch.isfinite(all_predicted_bounding_box)):
+            raise ValueError('SPMTrack produced non-finite confidence or bounding boxes; evaluation aborted')
 
         all_predicted_bounding_box = all_predicted_bounding_box.to(torch.float64)
 

@@ -1,5 +1,5 @@
 # Core runtime dependencies for STCMTrack.
-# Install PyTorch and torchvision separately as documented in README.md.
+# Install matching PyTorch and torchvision builds first; see docs/SETUP.md.
 
 numpy==1.26.4
 opencv-python==4.11.0.86

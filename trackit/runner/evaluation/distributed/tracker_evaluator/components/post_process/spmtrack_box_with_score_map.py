@@ -1,21 +1,20 @@
-"""SPMTrack baseline post-processing: Hann-window penalized peak selection.
+"""SPMTrack baseline post-processing: peak selection with an optional Hann window.
 
 Ported from the official
 trackit/runner/evaluation/distributed/tracker_evaluator/components/post_process/box_with_score_map.py
 @ WenRuiCai/SPMTrack c581fe27231f3e16c38578e47daddadfaf6ffd7d (Apache-2.0).
 
-The box is read at the peak of the Hann-penalized response map and the reported confidence is
-the raw (un-penalized) response at that same peak. This is intentionally different from the
-STCMTrack post-processing (`box_with_score_map`), which uses no Hann window and measures the
-confidence at the predicted box center (Sec. 2.1). The two are kept in separate classes so the
-baseline cannot silently pick up the STCMTrack definition.
+The public experiment configuration disables the Hann window for both models. SPMTrack
+reports the raw response at the selected peak, while STCMTrack (`box_with_score_map`)
+measures confidence at the predicted box center (Sec. 2.1). These model-specific confidence
+definitions are kept in separate classes. Both reject non-finite dense model outputs.
 
 Deviation from upstream: the constructor flag `classification_score_with_penalty` is not
 carried over, because upstream stores it but never reads it.
 """
 import torch
 from typing import Tuple
-from . import TrackerOutputPostProcess
+from . import TrackerOutputPostProcess, validate_dense_tracking_output
 
 
 class PostProcessing_BoxWithScoreMap_SPMTrack(TrackerOutputPostProcess):
@@ -40,6 +39,7 @@ class PostProcessing_BoxWithScoreMap_SPMTrack(TrackerOutputPostProcess):
             del self._window
 
     def __call__(self, output):
+        validate_dense_tracking_output(output)
         # shape: (N, H, W), (N, H, W, 4)
         predicted_score_map = output['score_map'].detach().float().sigmoid()
         predicted_bbox = output['boxes'].detach().float()
