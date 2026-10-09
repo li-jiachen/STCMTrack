@@ -185,16 +185,14 @@ Data preparation and loading fail explicitly on missing frames, annotation lengt
 
 ## Model weights
 
-The trained weights are available on the [Releases](https://github.com/li-jiachen/STCMTrack/releases) page; they are not stored in Git. Download them into `weights/`. `test_stcmtrack.sh` reads the following files by default:
+Only the two STCMTrack weight files for **Anti-UAV410** are currently released in [v1.0.0](https://github.com/li-jiachen/STCMTrack/releases/tag/v1.0.0). Download both files into `weights/`.
 
-| Setting | Files in `weights/` |
-|---|---|
-| STCMTrack on Anti-UAV410 (default) | `stcmtrack_base.safetensors`, `stcmtrack_ltcp.safetensors` |
-| STCMTrack on Anti-UAV (`DATASET=antiuav300`) | `stcmtrack_antiuav300_base.safetensors`, `stcmtrack_antiuav300_ltcp.safetensors` |
-| SPMTrack baseline on Anti-UAV410 (`VARIANT=baseline`) | `spmtrack_baseline.safetensors` |
-| SPMTrack baseline on Anti-UAV (`VARIANT=baseline DATASET=antiuav300`) | `spmtrack_antiuav300_baseline.safetensors` |
+| File | Content | Download |
+|---|---|---|
+| `stcmtrack_base.bin` | STCMTrack tracking network, Anti-UAV410 | [Download](https://github.com/li-jiachen/STCMTrack/releases/download/v1.0.0/stcmtrack_base.bin) |
+| `stcmtrack_ltcp.bin` | LTCP gate, Anti-UAV410 | [Download](https://github.com/li-jiachen/STCMTrack/releases/download/v1.0.0/stcmtrack_ltcp.bin) |
 
-A base file contains the tracking network and an LTCP file contains the LTCP gate. The base file is loaded first and the LTCP file second; variants without LTCP use the base file only. `test_stcmtrack.sh` checks before the evaluation that the two files were exported from the same training snapshot. Weights obtained with the training commands below use the same names, and other locations can be passed with `BASE_WEIGHT` and `LTCP_WEIGHT`. See [weights/README.md](weights/README.md).
+The released assets retain their original `.bin` filenames. See the [release notes](https://github.com/li-jiachen/STCMTrack/releases/tag/v1.0.0) for checkpoint compatibility details.
 
 ## Evaluation
 
@@ -327,6 +325,3 @@ python tools/check_variant_mapping.py --check           # components of every VA
 
 This code base is built on [SPMTrack](https://github.com/WenRuiCai/SPMTrack). We thank the authors of DINOv2, SPMTrack, Anti-UAV410 and Anti-UAV for making their models, code and datasets publicly available.
 
-## License
-
-This project is released under the Apache License 2.0 (see `LICENSE`). The files under `trackit/models/methods/SPMTrack/` and the related pipeline and configuration files are derived from [WenRuiCai/SPMTrack](https://github.com/WenRuiCai/SPMTrack) (Apache-2.0) at commit `c581fe27231f3e16c38578e47daddadfaf6ffd7d`; their origin and the changes made to them are recorded in `trackit/models/methods/SPMTrack/UPSTREAM.json`.
