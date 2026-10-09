@@ -1,6 +1,6 @@
 # Implementation details
 
-This document lists the settings and conventions of the STCMTrack implementation in more detail than the paper. Section and equation numbers refer to the paper. Values not explicitly reported in the paper are public implementation defaults under `config/STCMTrack/`, not verified original experiment settings.
+The STCMTrack implementation follows the method and explicit settings in the paper. This document records those settings together with the fixed defaults needed to train and evaluate the public implementation. Section and equation numbers refer to the paper. Values not explicitly reported in the paper are implementation defaults under `config/STCMTrack/`; they are not claims about the original experiments. The published scores have not been reproduced with this implementation.
 
 ## 1. Tracking loop
 
@@ -67,11 +67,11 @@ Fallbacks:
 
 The ablation mixins `ctr_no_mcc` and `ctr_no_rgtc` switch off one branch. Without MCC the search crop is not re-centered, while RGTC still uses the homography for the frame alignment and the motion-corrected reference center. Without RGTC low-confidence predictions are kept.
 
-The eight variants follow Table 2: `VARIANT=baseline` selects independent SPMTrack for row 1; rows 2–8 use STCMTrack and share its base weights and settings. Data, optimizer and loss settings are aligned between the models. SPMTrack retains different template and query computations, sampling and post-processing; see [ABLATION.md](ABLATION.md) for the remaining conflict with the paper's statement that all other settings are shared. The backbone and MLP head architectures themselves are the same.
+The eight variants follow Table 2: `VARIANT=baseline` selects independent SPMTrack for row 1; rows 2–8 use STCMTrack and share its base weights and settings. Data, optimizer and loss settings are aligned between the models. The backbone and MLP head architectures are the same, but SPMTrack retains its template and query computations, sampling and post-processing. These differences limit the paper's statement that all other settings are shared; see [ABLATION.md](ABLATION.md).
 
 ## 3. Training (Sec. 3.1)
 
-The paper specifies 80 + 20 epochs, LTCP-only training in stage 2, BCE/GIoU weights 1 : 1, AdamW learning rate 1e-4, weight decay 0.1 and cosine scheduling. The sampling, augmentation, binary center labels, frame-loss averaging, no warm-up, batch/sample counts, mixed precision and clipping below are additional implementation conventions; verifying the original experiments requires their configurations.
+The paper specifies 80 + 20 epochs, LTCP-only training in stage 2, BCE/GIoU weights 1 : 1, AdamW learning rate 1e-4, weight decay 0.1 and cosine scheduling. Sampling, augmentation, binary center labels, frame-loss averaging, no warm-up, batch/sample counts, mixed precision and clipping below are additional fixed defaults. They make the paper-defined implementation runnable without claiming to recover unspecified historical settings.
 
 | Item | Value |
 |---|---|
@@ -120,4 +120,4 @@ Areas, centers, scales and P<sub>n</sub> are always computed after the correspon
 - `tools/export_stcmtrack_weights.py` splits a snapshot into a base file (everything except LTCP) and an LTCP file (the gate and the two buffers). The default evaluation filenames are `stcmtrack_base.bin` and `stcmtrack_ltcp.bin` for Anti-UAV410, and `stcmtrack_antiuav300_base.bin` and `stcmtrack_antiuav300_ltcp.bin` for Anti-UAV. Both files record the SHA-256 of the source snapshot in their metadata, and a manifest with the SHA-256 of the outputs is written next to the base file. Existing outputs are never overwritten.
 - `tools/check_stcmtrack_weights.py` (called by `test_stcmtrack.sh`) validates the base and LTCP files. Newly exported pairs must identify the same source snapshot; the older v1.0.0 release pair is recognized by its file SHA-256 values.
 - The loader recognizes the incremental legacy format, translates its scaling fields and can supply frozen parameters from pretrained DINOv2. However, the released base has learned query values that overflow FP32 LayerNorm, so the numerical preflight rejects it before copying parameters. Format compatibility alone does not make this checkpoint usable.
-- File SHA-256 checks establish identity of the released pair. The old files lack training-source metadata. A valid checkpoint and the original experiment configurations are needed to verify the reported scores; see [weights/README.md](../weights/README.md).
+- File SHA-256 checks establish identity of the released pair, not numerical validity or reproduction of the paper's scores. Train new checkpoints with the settings above and run a complete evaluation to measure this implementation's performance; see [weights/README.md](../weights/README.md).

@@ -15,6 +15,7 @@ from pathlib import Path
 import re
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 from safetensors.numpy import save_file
@@ -116,7 +117,7 @@ class VariantMappingTests(unittest.TestCase):
                         config = self.ablation_config(name, dataset, evaluation)
                         self.assertEqual(mapping.shared_config(config), reference)
 
-    def test_all_eight_rows_share_explicit_paper_settings_and_prediction_heads(self):
+    def test_all_eight_rows_share_public_defaults_and_prediction_heads(self):
         for dataset in ('antiuav410', 'antiuav300'):
             rows = mapping.compute(dataset)
             reference = rows['ltcp']
@@ -171,6 +172,65 @@ class VariantMappingTests(unittest.TestCase):
                                  (ROOT / f'config/STCMTrack/_mixin/{name}.yaml').read_bytes())
 
 
+class STCMTrackTrainingEntryTests(unittest.TestCase):
+    def test_real_entry_point_builds_the_two_paper_stages_for_both_datasets(self):
+        for dataset in ('antiuav410', 'antiuav300'):
+            with self.subTest(dataset=dataset):
+                stages = mapping.compute_training(dataset)
+                self.assertEqual(mapping.training_problems(stages), [])
+                self.assertEqual(stages[1]['method'], 'STCMTrack')
+                self.assertEqual((stages[1]['epochs'], stages[1]['ltcp_enabled'], stages[1]['train_only']),
+                                 (80, False, False))
+                self.assertEqual((stages[2]['epochs'], stages[2]['ltcp_enabled'], stages[2]['train_only']),
+                                 (20, True, True))
+                self.assertIn('ltcp_stage2', stages[2]['mixins'])
+                self.assertTrue(stages[2]['checkpoint_required'])
+                self.assertTrue(stages[2]['loads_stage1_checkpoint'])
+                self.assertTrue(stages[2]['checkpoint_preflight_before_cuda'])
+
+    def test_check_rejects_changed_stage2_yaml_budget_or_freeze_after_real_mixin_application(self):
+        original_loader = mapping.load_yaml
+        for setting, value in (('run.num_epochs', 10), ('model.ltcp.train_only', False)):
+            def changed_stage2(path):
+                rules = original_loader(path)
+                if Path(path).name == 'ltcp_stage2.yaml':
+                    rules = copy.deepcopy(rules)
+                    for rule in rules:
+                        if rule['path'] == setting:
+                            rule['value'] = value
+                return rules
+
+            with self.subTest(setting=setting), patch.object(mapping, 'load_yaml', changed_stage2):
+                stages = mapping.compute_training('antiuav410')
+                self.assertTrue(any('only LTCP for 20 epochs' in problem
+                                    for problem in mapping.training_problems(stages)))
+
+    def test_check_rejects_wrong_training_stage_mixin_wiring(self):
+        original = mapping.TRAIN_SCRIPT.read_text(encoding='utf-8')
+        wrong_scripts = (
+            original.replace('mixin_names+=(ltcp ltcp_stage2)', 'mixin_names+=(ltcp)'),
+            original.replace('exp_name="STCMTrack-Train-Stage1-${DATASET}"',
+                             'mixin_names+=(ltcp)\n    exp_name="STCMTrack-Train-Stage1-${DATASET}"'),
+        )
+        for number, text in enumerate(wrong_scripts):
+            with self.subTest(case=number):
+                self.assertTrue(mapping.training_problems(mapping.compute_training(text=text)))
+
+    def test_check_rejects_missing_checkpoint_handoff_or_preflight(self):
+        original = mapping.TRAIN_SCRIPT.read_text(encoding='utf-8')
+        preflight = 'python3 "$REPO_ROOT/tools/check_stcmtrack_weights.py" --base "$BASE_WEIGHT"'
+        for removed in ('weight_args+=(--weight_path "$BASE_WEIGHT")',
+                        '${weight_args[@]+"${weight_args[@]}"}', preflight):
+            with self.subTest(removed=removed):
+                stages = mapping.compute_training(text=original.replace(removed, ''))
+                self.assertTrue(any('checkpoint' in problem for problem in mapping.training_problems(stages)))
+
+    def test_hard_bce_targets_are_shared_defaults_not_an_explicit_paper_requirement(self):
+        settings = mapping.compute_training()[1]['shared_public_settings']
+        settings['criteria']['classification']['iou_aware_classification_score'] = True
+        self.assertEqual(mapping.explicit_paper_setting_problems(settings), [])
+
+
 class SPMTrackConfigTests(unittest.TestCase):
     cfg = load_yaml(str(ROOT / 'config/SPMTrack/dinov2/config.yaml'))
 
@@ -183,7 +243,7 @@ class SPMTrackConfigTests(unittest.TestCase):
         tmoe = self.cfg['model']['tmoe']
         self.assertEqual((tmoe['r'], tmoe['alpha'], tmoe['expert_nums'], tmoe['init_method']), (64, 64, 4, 'bert'))
 
-    def test_training_keeps_spm_structure_and_uses_the_paper_loss(self):
+    def test_training_keeps_spm_structure_and_uses_shared_loss_defaults(self):
         train = self.cfg['run']['data']['train']
         positive = train['siamese_training_pair_sampling']['positive_sample']
         self.assertEqual((positive['sample_mode'], positive['num_template_frames'], positive['num_search_frames'],
@@ -218,7 +278,7 @@ class SPMTrackConfigTests(unittest.TestCase):
         self.assertFalse(self.cfg['run']['runner']['train']['torch_compile']['enabled'])
         self.assertFalse(self.cfg['run']['efficiency_assessment']['enabled'])
 
-    def test_optimizer_and_losses_share_the_paper_configuration(self):
+    def test_optimizer_and_losses_share_the_public_configuration(self):
         stcm = load_yaml(str(ROOT / 'config/STCMTrack/dinov2/config.yaml'))
         self.assertEqual(mapping.paper_settings(self.cfg), mapping.paper_settings(stcm))
         optimization = self.cfg['run']['runner']['train']['optimization']
@@ -235,7 +295,7 @@ class SPMTrackConfigTests(unittest.TestCase):
         positive = stcm['run']['data']['train']['siamese_training_pair_sampling']['positive_sample']
         self.assertEqual((positive['sample_mode'], positive['num_template_frames'], positive['num_search_frames']),
                          ('first_frame_causal', 1, 3))
-        self.assertNotIn('frame_loss_reduction', stcm['run']['runner']['train']['criteria'])  # default 'mean'
+        self.assertEqual(stcm['run']['runner']['train']['criteria']['frame_loss_reduction'], 'mean')
 
 
 class IsolationTests(unittest.TestCase):

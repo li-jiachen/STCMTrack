@@ -94,6 +94,8 @@ else
     mixin_names+=(ltcp ltcp_stage2)
     weight_args+=(--weight_path "$BASE_WEIGHT")
     exp_name="STCMTrack-Train-Stage2-${DATASET}"
+    # Validate the stage-1 base before CUDA setup and dataset loading.
+    python3 "$REPO_ROOT/tools/check_stcmtrack_weights.py" --base "$BASE_WEIGHT"
 fi
 
 printf 'REPO_ROOT: %s\n' "$REPO_ROOT"

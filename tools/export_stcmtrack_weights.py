@@ -11,7 +11,12 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import sys
 from safetensors.torch import load_file, save_file
+
+if __package__ in (None, ''):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from trackit.core.utils.stcmtrack_weights import validate_query_numerics
 
 METADATA_KEYS = ('_expert_alpha', '_use_rsexpert')
 
@@ -37,6 +42,8 @@ def export_weights(checkpoint, base_output, ltcp_output=None):
         raise ValueError('LTCP export requires a stage-2 checkpoint containing the complete gate')
     if ltcp_keys and ltcp_output is None:
         raise ValueError('Supply --ltcp-output to preserve the LTCP weights in this checkpoint')
+    validate_query_numerics(state['track_query'].detach().cpu().double().numpy(),
+                            state['query_embed'].detach().cpu().double().numpy())
     source_sha256 = hashlib.sha256(checkpoint.read_bytes()).hexdigest()
     metadata = {'source_checkpoint_sha256': source_sha256}
     base_output.parent.mkdir(parents=True, exist_ok=True)

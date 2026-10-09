@@ -211,6 +211,21 @@ class ModelTests(unittest.TestCase):
         torch.testing.assert_close(ltcp(x, mem, q), (1 - gate) * x + gate * context)
         torch.testing.assert_close(ltcp(x, None, q), x, rtol=0, atol=0)
 
+    def test_export_rejects_query_overflow_before_writing_outputs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            state = make_model().state_dict()
+            state['track_query'] = torch.zeros_like(state['track_query'])
+            state['track_query'][0, 0] = 1.e28
+            source = tmp / 'model.bin'
+            save_file(state, str(source))
+            original = source.read_bytes()
+            outputs = tmp / 'exported'
+            with self.assertRaisesRegex(ValueError, 'overflow FP32 LayerNorm'):
+                export_weights(source, outputs / 'base.bin', outputs / 'ltcp.bin')
+            self.assertFalse(outputs.exists())
+            self.assertEqual(source.read_bytes(), original)
+
 
 class CTRTests(unittest.TestCase):
     def setUp(self):

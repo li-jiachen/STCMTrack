@@ -1,3 +1,6 @@
+# Public implementation of the paper's two-stage STCMTrack training.
+# Settings omitted by the paper use the fixed defaults documented in
+# docs/IMPLEMENTATION_DETAILS.md.
 type: "default"
 
 num_epochs: 80
@@ -252,6 +255,7 @@ runner:
 
     criteria:
       type: "box_with_score_map"
+      frame_loss_reduction: "mean"
       classification:
         type: "binary_cross_entropy"
         iou_aware_classification_score: false

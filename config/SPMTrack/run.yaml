@@ -10,7 +10,7 @@
 #   * training: 80 epochs, AdamW lr 1e-4 / weight decay 0.1, cosine schedule, equally weighted BCE/GIoU;
 #   * shared implementation choices not specified in the paper: global batch 4, 2048 train / 4096 val
 #     samples per epoch, no warm-up or per-parameter decay overrides, hard center targets and mean frame
-#     loss; these require the original experiment configs for historical verification;
+#     loss; these are fixed defaults for the public implementation;
 #   * torch.compile and efficiency assessment off;
 #   * evaluation: the shared one_pass_evaluation_compatible handler and PyTracking export (metrics of Sec. 3.2).
 

@@ -33,7 +33,7 @@ python tools/export_stcmtrack_weights.py /path/to/stage2/checkpoint/epoch_19/mod
   --ltcp-output weights/stcmtrack_ltcp.bin
 ```
 
-These exports carry source-snapshot metadata and an output hash manifest. Evaluation checks that the base and gate originate from the same snapshot. Keep each pair together; mixing original release files with new exports is refused. Omit `--ltcp-output` for a stage-1 checkpoint.
+Export checks the query numerical range before writing any output. These exports carry source-snapshot metadata and an output hash manifest. Evaluation checks that the base and gate originate from the same snapshot. Keep each pair together; mixing original release files with new exports is refused. Omit `--ltcp-output` for a stage-1 checkpoint.
 
 The release provides Anti-UAV410 weights only. `DATASET=antiuav300` requires separately trained files, named `stcmtrack_antiuav300_base.bin` and `stcmtrack_antiuav300_ltcp.bin` by default.
 

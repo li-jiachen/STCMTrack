@@ -1,6 +1,6 @@
 # Table 2 ablations
 
-The evaluation variants follow Table 2 of the paper. Row 1 uses the independent SPMTrack baseline; rows 2–8 use STCMTrack with the indicated components.
+The implementation follows the paper's method and Table 2 component combinations. Row 1 uses the independent SPMTrack baseline; rows 2–8 use STCMTrack with the indicated components. Settings omitted from the paper use the fixed defaults in [IMPLEMENTATION_DETAILS.md](IMPLEMENTATION_DETAILS.md). The published scores have not been reproduced with this implementation.
 
 | Row | `VARIANT` | LTCP | MCC | RGTC | Model |
 |---|---|---|---|---|---|
@@ -30,7 +30,7 @@ python tools/export_stcmtrack_weights.py /path/to/stage2/checkpoint/epoch_19/mod
 
 Rows 2–8 share the STCMTrack base file. Rows with LTCP additionally load the same gate file; the other rows skip it. Newly exported files record their source snapshot. The loader recognizes the published incremental `.bin` format, but currently rejects the released base because its learned query values overflow FP32 LayerNorm. A valid checkpoint is required; see [weights/README.md](../weights/README.md).
 
-SPMTrack and STCMTrack share the paper's data splits, input sizes, 80-epoch base training budget, AdamW (learning rate 1e-4, weight decay 0.1), cosine schedule and equally weighted BCE/GIoU losses. STCMTrack adds the frozen-base LTCP training stage. Binary center targets, averaging search-frame losses, no warm-up and the batch/sampling budget are public implementation conventions not specified in the paper; the original experiment configurations must be checked before claiming reproduction. Each benchmark requires its own trained weights.
+SPMTrack and STCMTrack share the paper's data splits, input sizes, 80-epoch base training budget, AdamW (learning rate 1e-4, weight decay 0.1), cosine schedule and equally weighted BCE/GIoU losses. STCMTrack adds the frozen-base LTCP training stage. Binary center targets, averaging search-frame losses, no warm-up and the batch/sample counts are fixed public defaults not specified in the paper. Each benchmark requires its own trained weights.
 
 ## Evaluation
 
@@ -49,8 +49,8 @@ python tools/check_variant_mapping.py --check
 python tools/check_variant_mapping.py --dataset antiuav300 --check
 ```
 
-## Remaining difference in the paper's description
+## Baseline interpretation
 
 The paper calls row 1 SPMTrack and states that the remaining experimental settings are shared. The independent SPMTrack model retains three templates, propagated query state and query-based reweighting before the prediction heads, together with two-search-frame interval sampling, per-image augmentation, online templates and Hann-window post-processing. STCMTrack uses the first-frame template, a query encoded from the current joint features and LTCP features passed directly to the heads. The ViT backbone and MLP head architectures are shared, but these surrounding computations differ.
 
-Keeping the original SPMTrack baseline and the STCMTrack method therefore leaves differences beyond the three component switches. Aligning the common optimizer and loss settings does not eliminate that conflict or establish reproduction of the paper's numerical results. The published scores must be checked against the original experiment configurations and a complete evaluation.
+Keeping the independent SPMTrack baseline and the paper-defined STCMTrack method therefore leaves differences beyond the three component switches between row 1 and rows 2–8. The scripts preserve that baseline identity and align the common training settings; they do not make row 1 a strictly controlled three-switch comparison. Train valid checkpoints and evaluate all eight variants to obtain new results for this implementation. Those measurements must be reported separately from the paper's published scores.

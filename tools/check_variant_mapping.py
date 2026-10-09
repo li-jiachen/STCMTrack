@@ -10,7 +10,7 @@ The table is derived statically, without importing torch, from
 
   python tools/check_variant_mapping.py            # markdown table
   python tools/check_variant_mapping.py --json
-  python tools/check_variant_mapping.py --check    # exit 1 if a VARIANT does not select the components listed below
+  python tools/check_variant_mapping.py --check    # also check the paper's two-stage STCMTrack training entry point
 """
 import argparse
 import ast
@@ -27,6 +27,7 @@ from trackit.core.boot.funcs.utils.custom_yaml_loader import load_yaml  # noqa: 
 from trackit.core.boot.funcs.mixin import apply_static_mixin_rules  # noqa: E402
 
 SCRIPT = ROOT / 'test_stcmtrack.sh'
+TRAIN_SCRIPT = ROOT / 'train_stcmtrack.sh'
 CONFIG_ROOT = ROOT / 'config'
 CONFIG_NAME = 'dinov2'
 # Table 2 row 1 is the independent SPMTrack baseline; rows 2-8 are STCMTrack configurations.
@@ -118,7 +119,11 @@ def config_facts(config):
 
 
 def paper_settings(config):
-    """The explicit common settings in Sec. 3.1, independent of model-specific structure."""
+    """Shared public settings, including defaults not specified by the paper.
+
+    The historical name is retained for consumers of the mapping JSON. Only the
+    subset checked by explicit_paper_setting_problems is asserted as Sec. 3.1.
+    """
     optimization = config['run']['runner']['train']['optimization']
     criteria = copy.deepcopy(config['run']['runner']['train']['criteria'])
     criteria.setdefault('frame_loss_reduction', 'mean')
@@ -170,6 +175,99 @@ def settings_facts(config):
             'ltcp_parameters_sha256': fingerprint(ltcp) if ltcp else None,
             'ctr_parameters_sha256': fingerprint(ctr) if ctr else None,
             'ltcp_parameters': ltcp or None, 'ctr_parameters': ctr or None}
+
+
+def parse_training_stages(text):
+    """Read the supported training entry point without executing conda or CUDA.
+
+    Unknown shell layouts fail closed so a changed mixin branch cannot silently
+    be checked against hard-coded stage assumptions.
+    """
+    stage = re.search(r'^if \[\[ "\$TRAIN_STAGE" == 1 \]\]; then\n(.*?)\nelse\n(.*?)\nfi', text, re.S | re.M)
+    initial = re.search(r'^mixin_names=\(([^\n]*)\)$', text, re.M)
+    method = re.search(r'^"\$REPO_ROOT/boot\.sh" (\w+) (\w+) ', text, re.M)
+    if stage is None or initial is None or method is None:
+        raise ValueError('training stage layout changed; update check_variant_mapping.py')
+    common_mixins = initial.group(1).split()
+    if common_mixins != ['disable_torch_compile', '${dataset_mixins[@]+"${dataset_mixins[@]}"}']:
+        raise ValueError('training mixin initialization changed; update check_variant_mapping.py')
+    if method.groups() != ('STCMTrack', CONFIG_NAME):
+        raise ValueError('the two-stage training entry point must select STCMTrack dinov2')
+    append_matches = list(re.finditer(r'^\s*mixin_names\+=\(([^)]*)\)', text, re.M))
+    stages = {}
+    for number, body in enumerate(stage.groups(), 1):
+        mixins = []
+        for match in re.finditer(r'^\s*mixin_names\+=\(([^)]*)\)', body, re.M):
+            values = match.group(1).split()
+            if any(re.fullmatch(r'\w+', value) is None for value in values):
+                raise ValueError('dynamic training stage mixins require an updated checker')
+            mixins.extend(values)
+        stages[number] = {'method': method.group(1), 'mixins': ['disable_torch_compile'] + mixins}
+    if len(append_matches) != sum(len(re.findall(r'^\s*mixin_names\+=', body, re.M))
+                                  for body in stage.groups()):
+        raise ValueError('training mixins outside the stage branches require an updated checker')
+    stage2 = stage.group(2)
+    stages[2]['checkpoint_required'] = bool(re.search(
+        r'if \[\[ -z "\$BASE_WEIGHT" \|\| ! -f "\$BASE_WEIGHT" \]\]; then.*?exit 1\s*fi', stage2, re.S))
+    stages[2]['loads_stage1_checkpoint'] = 'weight_args+=(--weight_path "$BASE_WEIGHT")' in stage2 \
+        and '${weight_args[@]+"${weight_args[@]}"}' in text[method.start():]
+    preflight = 'python3 "$REPO_ROOT/tools/check_stcmtrack_weights.py" --base "$BASE_WEIGHT"'
+    stages[2]['checkpoint_preflight_before_cuda'] = preflight in stage2 \
+        and text.find(preflight) < text.find('python3 - "$first_device_id"')
+    dataset_mixins = {}
+    for names, body in parse_case_block(text, 'DATASET').items():
+        match = re.search(r'dataset_mixins=\(([^)]*)\)', body)
+        for name in names:
+            if match is not None:
+                dataset_mixins[name] = match.group(1).split()
+    return stages, dataset_mixins
+
+
+def compute_training(dataset='antiuav410', text=None):
+    stages, datasets = parse_training_stages(TRAIN_SCRIPT.read_text(encoding='utf-8') if text is None else text)
+    for info in stages.values():
+        info['mixins'] = info['mixins'][:1] + datasets[dataset] + info['mixins'][1:]
+        config = build_config(info['method'], info['mixins'])
+        ltcp = config['model'].get('ltcp', {})
+        info.update(epochs=config['run']['num_epochs'], ltcp_enabled=bool(ltcp.get('enabled', False)),
+                    train_only=bool(ltcp.get('train_only', False)), shared_public_settings=paper_settings(config))
+    return stages
+
+
+def explicit_paper_setting_problems(settings, epochs=80):
+    """Check what Sec. 3.1 actually specifies, excluding label and scheduler defaults."""
+    optimizer, criteria = settings['optimizer'], settings['criteria']
+    expected = (
+        settings['backbone']['type'] == 'DINOv2',
+        settings['backbone']['parameters']['name'] == 'ViT-B/14',
+        settings['template_size'] == [196, 196],
+        settings['search_region_size'] == [378, 378],
+        settings['stage1_epochs'] == epochs,
+        optimizer['type'] == 'AdamW', optimizer['lr'] == 1.e-4, optimizer['weight_decay'] == .1,
+        settings['scheduler']['sched'] == 'cosine',
+        criteria['classification']['type'] == 'binary_cross_entropy',
+        criteria['bbox_regression']['type'] == 'GIoU',
+        criteria['classification']['weight'] == criteria['bbox_regression']['weight'] == 1.,
+    )
+    return [] if all(expected) else ['configuration differs from the explicit Sec. 3.1 settings']
+
+
+def training_problems(stages):
+    """This 80+20 contract belongs to STCMTrack, not the independent SPMTrack baseline."""
+    found = []
+    stage1, stage2 = stages[1], stages[2]
+    if stage1['epochs'] != 80 or stage1['ltcp_enabled'] or stage1['train_only']:
+        found.append('STCMTrack stage 1 must train the tracker for 80 epochs with LTCP disabled')
+    if stage2['epochs'] != 20 or not stage2['ltcp_enabled'] or not stage2['train_only']:
+        found.append('STCMTrack stage 2 must train only LTCP for 20 epochs')
+    if not stage2['checkpoint_required'] or not stage2['loads_stage1_checkpoint']:
+        found.append('STCMTrack stage 2 must require and load the supplied stage-1 BASE_WEIGHT checkpoint')
+    if not stage2['checkpoint_preflight_before_cuda']:
+        found.append('STCMTrack stage 2 must check the stage-1 checkpoint before CUDA initialization')
+    for number, info in stages.items():
+        found.extend(f'STCMTrack stage {number}: {problem}' for problem in
+                     explicit_paper_setting_problems(info['shared_public_settings'], epochs=80 if number == 1 else 20))
+    return found
 
 
 # ----------------------------------------------------------------------------- AST
@@ -410,30 +508,13 @@ def problems(rows):
                 found.append(f'Ablations use different component parameters ({key})')
         for name, row in rows.items():
             if row['paper_settings'] != reference['paper_settings']:
-                found.append(f'{name}: explicit common paper settings differ from ltcp')
+                found.append(f'{name}: shared public settings differ from ltcp')
             if row['model']['heads'] != reference['model']['heads'] or row['model'][
                     'head_definitions_sha256'] != reference['model']['head_definitions_sha256']:
                 found.append(f'{name}: prediction head construction differs from ltcp')
     for name, row in rows.items():
         settings = row['paper_settings']
-        optimizer = settings['optimizer']
-        criteria = settings['criteria']
-        expected = (
-            settings['backbone']['type'] == 'DINOv2',
-            settings['backbone']['parameters']['name'] == 'ViT-B/14',
-            settings['template_size'] == [196, 196],
-            settings['search_region_size'] == [378, 378],
-            settings['stage1_epochs'] == 80,
-            optimizer['type'] == 'AdamW', optimizer['lr'] == 1.e-4,
-            optimizer['weight_decay'] == .1,
-            settings['scheduler']['sched'] == 'cosine',
-            criteria['classification']['type'] == 'binary_cross_entropy',
-            not criteria['classification']['iou_aware_classification_score'],
-            criteria['bbox_regression']['type'] == 'GIoU',
-            criteria['classification']['weight'] == criteria['bbox_regression']['weight'] == 1.,
-        )
-        if not all(expected):
-            found.append(f'{name}: configuration differs from the explicit Sec. 3.1 settings')
+        found.extend(f'{name}: {problem}' for problem in explicit_paper_setting_problems(settings))
         ltcp, ctr = row['ltcp_parameters'], row['ctr_parameters']
         if ltcp and (ltcp['memory_size'] != 2 or ltcp.get('store_enhanced_memory', False)):
             found.append(f'{name}: LTCP must keep the two most recent raw search-token frames')
@@ -483,17 +564,24 @@ def main():
     parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
     rows = compute(args.dataset)
+    stages = compute_training(args.dataset)
     if args.json:
         print(json.dumps(rows, indent=2, ensure_ascii=False))
     else:
         print(markdown(rows))
+        print('\nSTCMTrack training entry point (independent SPMTrack is excluded):')
+        print('| Stage | Epochs | LTCP enabled | Only LTCP trainable |')
+        print('|---|---:|:---:|:---:|')
+        for number, stage in stages.items():
+            print(f'| {number} | {stage["epochs"]} | {stage["ltcp_enabled"]} | {stage["train_only"]} |')
     if args.check:
-        found = problems(rows)
+        found = problems(rows) + training_problems(stages)
         for line in found:
             print('MISMATCH:', line, file=sys.stderr)
         if found:
             raise SystemExit(1)
-        print(f'\nvariant mapping check passed for {len(rows)} variant names ({args.dataset})', file=sys.stderr)
+        print(f'\nvariant mapping and STCMTrack training checks passed for {len(rows)} variant names '
+              f'({args.dataset})', file=sys.stderr)
 
 
 if __name__ == '__main__':

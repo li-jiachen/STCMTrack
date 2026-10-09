@@ -1,6 +1,6 @@
 # SPMTrack baseline
 
-`VARIANT=baseline` selects the independent SPMTrack model for Table 1 and Table 2 row 1. It contains no LTCP, MCC or RGTC and requires its own trained checkpoint.
+The STCMTrack implementation follows the paper's method and explicit settings; unspecified settings use documented fixed defaults. `VARIANT=baseline` selects the independent SPMTrack model for Table 1 and Table 2 row 1. It contains no LTCP, MCC or RGTC and requires its own trained checkpoint. The published baseline scores have not been reproduced with this configuration.
 
 ```bash
 DEVICE_IDS=0 ./train_spmtrack.sh
@@ -23,9 +23,9 @@ The forward model retains the original computation. The port initializes learned
 
 ## Shared experiment settings
 
-The paper specifies the data splits, input sizes, 80-epoch base training budget, AdamW with learning rate 1e-4 and weight decay 0.1, cosine scheduling, equally weighted BCE/GIoU losses and shared evaluation metrics. The implementation additionally uses global batch size 4, 2048 training and 4096 validation samples per epoch, cosine decay to zero without warm-up, binary center targets and averaged search-frame losses. These additional choices are not stated in the paper and need verification against the original experiment configurations.
+The paper specifies the data splits, input sizes, 80-epoch base training budget, AdamW with learning rate 1e-4 and weight decay 0.1, cosine scheduling, equally weighted BCE/GIoU losses and shared evaluation metrics. The implementation additionally uses global batch size 4, 2048 training and 4096 validation samples per epoch, cosine decay to zero without warm-up, binary center targets and averaged search-frame losses. These are fixed public defaults, rather than claims about settings omitted from the paper.
 
-These common settings replace the upstream training configuration. The SPMTrack template, query, sampling and inference conventions remain distinct from STCMTrack. See [ABLATION.md](ABLATION.md) for the resulting limitation of the paper's statement that all remaining settings are shared. The current configuration has not been verified to reproduce the published SPMTrack scores.
+These common settings replace the upstream training configuration. The SPMTrack template, query, sampling and inference conventions remain distinct from STCMTrack. See [ABLATION.md](ABLATION.md) for the resulting limitation of the paper's statement that all remaining settings are shared. Retrain and evaluate this configuration to obtain new baseline results.
 
 ## Checkpoints
 
