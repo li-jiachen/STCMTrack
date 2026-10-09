@@ -1,7 +1,5 @@
 # Setup
 
-Use Linux or WSL2 with Bash, Conda and an NVIDIA GPU for the training and evaluation scripts. Run the commands below in that environment, rather than Windows PowerShell. CPU installations can run checkpoint and configuration checks; the launch scripts require CUDA.
-
 ## Code and environment
 
 ```bash
@@ -11,19 +9,16 @@ conda create -n stcmtrack python=3.10 -y
 conda activate stcmtrack
 ```
 
-Install `torch` and `torchvision` together using the command from the [official PyTorch installer](https://pytorch.org/get-started/locally/): select Linux, Pip, Python and a CUDA build supported by your GPU driver. The current PyTorch installer requires Python 3.10 or newer; Python 3.10 is used here for the pinned dependencies. A newer PyTorch release is not a claim about the paper's original environment.
-
-Then install the remaining dependencies and check GPU access:
+Use Python 3.10, [PyTorch 2.4.1](https://pytorch.org/get-started/previous-versions/) and torchvision 0.19.1 (CUDA 12.1).
 
 ```bash
+python -m pip install torch==2.4.1 torchvision==0.19.1 --index-url https://download.pytorch.org/whl/cu121
 python -m pip install -r requirements.txt
 python -c "import torch, torchvision; print(torch.__version__, torchvision.__version__); print('CUDA:', torch.cuda.is_available())"
-chmod +x boot.sh train_stcmtrack.sh train_spmtrack.sh test_stcmtrack.sh
+chmod +x boot.sh train_stcmtrack.sh test_stcmtrack.sh
 ```
 
-The launch scripts activate the `stcmtrack` Conda environment. Set `CONDA_ENV` if you use another name, and `CONDA_SH=/path/to/conda/etc/profile.d/conda.sh` if Conda cannot be found. The model builder downloads the official DINOv2 ViT-B/14 pretrained backbone on first use; allow network access for that download or provide it in the PyTorch Hub checkpoint cache.
-
-The paper-aligned implementation is on **main**. The `v1.0.0` release provides the two original weight attachments, but its automatically generated **Source code** archives point to the older tagged snapshot. Use the clone command above or [download main](https://github.com/li-jiachen/STCMTrack/archive/refs/heads/main.zip) for current code.
+Use the **main** branch with the `stcmtrack` Conda environment; the official DINOv2 ViT-B/14 pretrained backbone is downloaded automatically on first use.
 
 ## Data
 
@@ -69,4 +64,4 @@ Only the benchmark you run needs to be present. Evaluation reads the test direct
 
 ## Training and evaluation
 
-Use [train_stcmtrack.sh](../train_stcmtrack.sh) for two-stage STCMTrack training, [train_spmtrack.sh](../train_spmtrack.sh) for the independent SPMTrack baseline, and [test_stcmtrack.sh](../test_stcmtrack.sh) for evaluation. The script headers list the commands and supported options. New exports use `weights/retrained/` and explicit `BASE_WEIGHT`/`LTCP_WEIGHT` paths, keeping them separate from the original downloads. Independent SPMTrack and Anti-UAV require separately trained checkpoints; they are not supplied by the two Anti-UAV410 attachments.
+Use [train_stcmtrack.sh](../train_stcmtrack.sh) for two-stage STCMTrack training and [test_stcmtrack.sh](../test_stcmtrack.sh) for evaluation; the script headers list the commands and supported options. New exports use `weights/retrained/` and explicit `BASE_WEIGHT`/`LTCP_WEIGHT` paths. The released weights are for Anti-UAV410; Anti-UAV requires separately trained checkpoints.
