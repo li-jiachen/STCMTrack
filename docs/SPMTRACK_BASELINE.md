@@ -1,11 +1,13 @@
-# SPMTrack baseline
+# SPMTrack comparison
 
-SPMTrack is the baseline of the paper (SPMTrack† in Table 1, row 1 of Table 2). This repository contains it as an independent path, so that the baseline and STCMTrack are trained on the same data and evaluated with the same code:
+This repository contains an independent SPMTrack path for the SPMTrack† comparison in Table 1. It uses the same data splits and evaluation metrics as STCMTrack, while retaining the SPMTrack model and inference conventions:
 
 ```bash
 DEVICE_IDS=0 ./train_spmtrack.sh                     # add DATASET=antiuav300 for Anti-UAV
-VARIANT=baseline DEVICE_IDS=0 ./test_stcmtrack.sh    # alias: VARIANT=spmtrack
+VARIANT=spmtrack DEVICE_IDS=0 ./test_stcmtrack.sh
 ```
+
+`VARIANT=baseline` (alias `stcm_base`) instead selects STCMTrack with LTCP, MCC and RGTC disabled. All eight component ablations use that same STCMTrack foundation; see [ABLATION.md](ABLATION.md) for the mapping and the conflict with the paper's identification of Table 2 row 1 as SPMTrack.
 
 ## 1. Source
 
@@ -41,7 +43,7 @@ The network and the inference logic follow the pinned commit.
 - **Post-processing.** The response map is blended with a Hann window (weight 0.45) to select the peak; the confidence is the response at that peak. The search region uses area factor 5.0 and a minimum object size of 10 pixels.
 - **Training.** Three templates and two search frames per sample (`interval` sampling), per-image flip and color augmentation, IoU-aware classification targets, the losses of the two search frames added, weight decay 0 for one-dimensional parameters and embeddings, 2 warm-up epochs and a minimum learning rate of 1e-6.
 
-The baseline contains no LTCP, MCC or RGTC. Its model package, pipeline and post-processing class do not import the STCMTrack model, `ltcp`, `ctr` or the STCMTrack pipeline; `tests/test_spmtrack_static.py` and `tools/check_variant_mapping.py` verify this from the import graph.
+The independent SPMTrack comparison contains no LTCP, MCC or RGTC. Its model package, pipeline and post-processing class do not import the STCMTrack model, `ltcp`, `ctr` or the STCMTrack pipeline; `tests/test_spmtrack_static.py` and `tools/check_variant_mapping.py` verify this from the import graph.
 
 ## 3. Training and evaluation setup
 

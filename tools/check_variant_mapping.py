@@ -14,6 +14,8 @@ The table is derived statically, without importing torch, from
 """
 import argparse
 import ast
+import copy
+import hashlib
 import json
 import re
 import sys
@@ -27,7 +29,8 @@ from trackit.core.boot.funcs.mixin import apply_static_mixin_rules  # noqa: E402
 SCRIPT = ROOT / 'test_stcmtrack.sh'
 CONFIG_ROOT = ROOT / 'config'
 CONFIG_NAME = 'dinov2'
-# (LTCP, MCC, RGTC) of every VARIANT; these are rows 1-8 of Table 2. `stcm_base` is not a row of the table.
+# The eight module combinations of Table 2. Row 1 uses the same STCMTrack base as rows 2-8;
+# the independent SPMTrack comparison is deliberately separate. No published score is inferred.
 COMPONENTS = {
     'baseline': (False, False, False), 'ltcp': (True, False, False), 'mcc': (False, True, False),
     'rgtc': (False, False, True), 'ltcp_mcc': (True, True, False), 'ltcp_rgtc': (True, False, True),
@@ -106,7 +109,41 @@ def config_facts(config):
         'frame_loss_reduction': criteria.get('frame_loss_reduction', 'mean'),
         'iou_aware_classification': criteria['classification']['iou_aware_classification_score'],
         'stage1_epochs': config['run']['num_epochs'],
+        'full_template_inputs': {task: bool(config['run']['data'][task]['transform'].get(
+            'with_full_template_image', False)) for task in ('test', 'eval')},
     }
+
+
+def shared_config(config):
+    """Keep every setting except the named components and their necessary full-frame input.
+
+    Component parameters are checked separately, so removing their dictionaries here does not
+    permit changes to their thresholds or memory settings between ablation rows.
+    """
+    common = copy.deepcopy(config)
+    common.pop('name', None)
+    common.pop('logging', None)
+    common['model'].pop('ltcp', None)
+    common['run']['runner']['test']['evaluator']['pipeline'].pop('ctr', None)
+    for task in ('test', 'eval'):
+        common['run']['data'].get(task, {}).get('transform', {}).pop('with_full_template_image', None)
+    return common
+
+
+def fingerprint(value):
+    payload = json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=True)
+    return hashlib.sha256(payload.encode('utf-8')).hexdigest()
+
+
+def settings_facts(config):
+    ltcp = copy.deepcopy(config['model'].get('ltcp', {}))
+    ctr = copy.deepcopy(config['run']['runner']['test']['evaluator']['pipeline'].get('ctr', {}))
+    ltcp.pop('enabled', None)
+    for key in ('enabled', 'mcc_enabled', 'rgtc_enabled'):
+        ctr.pop(key, None)
+    return {'shared_settings_sha256': fingerprint(shared_config(config)),
+            'ltcp_parameters_sha256': fingerprint(ltcp) if ltcp else None,
+            'ctr_parameters_sha256': fingerprint(ctr) if ctr else None}
 
 
 # ----------------------------------------------------------------------------- AST
@@ -244,11 +281,13 @@ def compute(dataset='antiuav410'):
     for name, info in variants.items():
         base_mixins = ['disable_torch_compile'] + dataset_mixins[dataset] + info['variant_mixins']
         config = build_config(info['method'], base_mixins)
-        build_config(info['method'], base_mixins + ['evaluation'])  # the evaluation-only config must load too
+        eval_config = build_config(info['method'], base_mixins + ['evaluation'])
         facts = config_facts(config)
         model = resolve_model(facts['config_type'])
         pipeline = resolve_pipeline(facts['pipeline_type'])
-        rows[name] = {**info, **facts, 'model': model, 'pipeline': pipeline}
+        rows[name] = {**info, **facts, **settings_facts(config),
+                      'eval_shared_settings_sha256': settings_facts(eval_config)['shared_settings_sha256'],
+                      'model': model, 'pipeline': pipeline}
     return rows
 
 
@@ -285,10 +324,37 @@ def problems(rows):
             if row['post_process'] != 'box_with_score_map' or row['window_penalty'] != 0.:
                 found.append(f'{name}: STCMTrack post-processing must be the no-Hann definition')
     spm_names = {n for n, r in rows.items() if r['method'] == 'SPMTrack'}
-    if spm_names != {'baseline', 'spmtrack'}:
-        found.append(f'SPMTrack variants should be exactly baseline and spmtrack, got {sorted(spm_names)}')
-    if 'stcm_base' not in rows or rows['stcm_base']['method'] != 'STCMTrack':
-        found.append('stcm_base must exist and build STCMTrack')
+    if spm_names != {'spmtrack'}:
+        found.append(f'The separate SPMTrack comparison must be only spmtrack, got {sorted(spm_names)}')
+    for name in ('baseline', 'stcm_base'):
+        if name not in rows or rows[name]['method'] != 'STCMTrack':
+            found.append(f'{name} must exist and build STCMTrack')
+        elif (rows[name]['ltcp'], rows[name]['mcc'], rows[name]['rgtc']) != (False, False, False):
+            found.append(f'{name} must disable all three components')
+    controlled = [rows[name] for name in COMPONENTS if name in rows]
+    if len(controlled) != len(COMPONENTS):
+        found.append('All eight module combinations must exist')
+    if controlled:
+        reference = controlled[0]
+        for name in COMPONENTS:
+            if name not in rows:
+                continue
+            row = rows[name]
+            if row['method'] != 'STCMTrack' or row['model'] != reference['model'] \
+                    or row['pipeline'] != reference['pipeline']:
+                found.append(f'{name}: all eight ablations must use the same STCMTrack model and pipeline')
+            for key in ('shared_settings_sha256', 'eval_shared_settings_sha256'):
+                if row[key] != reference[key]:
+                    found.append(f'{name}: non-component settings differ from baseline ({key})')
+            needs_full_frame = row['mcc'] or row['rgtc']
+            if any(value != needs_full_frame for value in row['full_template_inputs'].values()):
+                found.append(f'{name}: full-template-image inputs must be enabled exactly when MCC or RGTC is used')
+        for key in ('ltcp_parameters_sha256', 'ctr_parameters_sha256'):
+            if len({row[key] for row in controlled if row[key] is not None}) > 1:
+                found.append(f'Ablations use different component parameters ({key})')
+        if 'stcm_base' in rows and any(rows['stcm_base'][key] != reference[key] for key in (
+                'shared_settings_sha256', 'eval_shared_settings_sha256')):
+            found.append('stcm_base must be an alias of baseline with identical settings')
     return found
 
 

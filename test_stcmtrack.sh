@@ -1,21 +1,25 @@
 #!/usr/bin/env bash
-# Evaluate STCMTrack, the SPMTrack baseline, or one of the ablation variants of Table 2.
+# Evaluate the eight STCMTrack module ablations or the separate SPMTrack comparison.
 #
 #   DEVICE_IDS=0 ./test_stcmtrack.sh                       # full model on the Anti-UAV410 test set
-#   VARIANT=baseline DEVICE_IDS=0 ./test_stcmtrack.sh      # Table 2, row 1: the SPMTrack baseline
+#   VARIANT=baseline DEVICE_IDS=0 ./test_stcmtrack.sh      # module ablation row 1: all three components off
+#   VARIANT=spmtrack BASE_WEIGHT=/path/to/spmtrack.safetensors DEVICE_IDS=0 ./test_stcmtrack.sh
 #   VARIANT=mcc_rgtc DEVICE_IDS=0 ./test_stcmtrack.sh      # Table 2, row 7
 #   DATASET=antiuav300 DEVICE_IDS=0 ./test_stcmtrack.sh    # Anti-UAV
 #   EVAL_SCOPE=short DEVICE_IDS=0 ./test_stcmtrack.sh      # quick run: 4 sequences, at most 200 frames each
 #
-# VARIANT (Table 2 rows): baseline(1) ltcp(2) mcc(3) rgtc(4) ltcp_mcc(5) ltcp_rgtc(6) mcc_rgtc(7) full(8, default)
-#   baseline | spmtrack  the SPMTrack baseline (method SPMTrack: three templates, propagated query state,
+# VARIANT (module combinations in Table 2): baseline(1) ltcp(2) mcc(3) rgtc(4) ltcp_mcc(5)
+#   ltcp_rgtc(6) mcc_rgtc(7) full(8, default). All eight use the same STCMTrack base network and settings.
+#   baseline | stcm_base STCMTrack with LTCP, MCC and RGTC all switched off.
+#   spmtrack             separate Table 1 comparison (method SPMTrack: three templates, propagated query state,
 #                        head-input re-weighting, Hann window; official WenRuiCai/SPMTrack @ c581fe2), without
 #                        LTCP, MCC and RGTC. It uses its own weight file (spmtrack_baseline.safetensors);
 #                        STCMTrack weights are refused. ALLOW_UNMARKED_SPMTRACK_WEIGHTS=1 declares a file
 #                        without the marker of this code as trained with the official SPMTrack code.
 #   ltcp ... full        STCMTrack (method STCMTrack) with the components of the row switched on.
-#   stcm_base            STCMTrack with LTCP, MCC and RGTC all switched off (not a row of Table 2).
-# See README.md (Evaluation) and docs/SPMTRACK_BASELINE.md.
+# The module-controlled row 1 is not the independent SPMTrack implementation. This mapping does not
+# establish that the paper's published scores were produced with these configurations; see
+# docs/ABLATION.md for the distinction and the original-paper conflict.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -76,8 +80,8 @@ esac
 VARIANT="${VARIANT:-full}"
 method_name=STCMTrack   # model family that boot.sh builds: STCMTrack or SPMTrack
 case "$VARIANT" in
-    baseline|spmtrack) method_name=SPMTrack; variant_mixins=(); use_ltcp=false ;;
-    stcm_base) variant_mixins=();                             use_ltcp=false ;;
+    spmtrack) method_name=SPMTrack; variant_mixins=();         use_ltcp=false ;;
+    baseline|stcm_base) variant_mixins=();                    use_ltcp=false ;;
     ltcp)      variant_mixins=(ltcp);                         use_ltcp=true ;;
     mcc)       variant_mixins=(ctr ctr_no_rgtc);              use_ltcp=false ;;
     rgtc)      variant_mixins=(ctr ctr_no_mcc);               use_ltcp=false ;;
@@ -109,7 +113,7 @@ case "$DATASET" in
     *) echo "Unsupported DATASET: $DATASET (expected antiuav410 or antiuav300)" >&2; exit 1 ;;
 esac
 if [[ "$method_name" == SPMTrack ]]; then
-    # The baseline has its own weights, trained with the SPMTrack structure; STCMTrack files are refused.
+    # The separate SPMTrack comparison needs weights trained with its own structure.
     case "$DATASET" in
         antiuav410) default_base_weight="$REPO_ROOT/weights/spmtrack_baseline.safetensors" ;;
         antiuav300) default_base_weight="$REPO_ROOT/weights/spmtrack_antiuav300_baseline.safetensors" ;;

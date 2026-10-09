@@ -8,6 +8,7 @@ import isolation of the baseline from LTCP / CTR / STCMTrack, the Pn definition 
 core and the checkpoint checks of tools/check_spmtrack_weights.py (on small synthetic files).
 """
 import ast
+import copy
 import hashlib
 import json
 from pathlib import Path
@@ -74,13 +75,70 @@ class VariantMappingTests(unittest.TestCase):
                 self.assertEqual(set(rows), {'baseline', 'spmtrack', 'stcm_base', 'ltcp', 'mcc', 'rgtc',
                                              'ltcp_mcc', 'ltcp_rgtc', 'mcc_rgtc', 'full'})
 
-    def test_baseline_is_spmtrack_and_stcm_base_is_not(self):
+    def test_module_baseline_and_separate_spmtrack_comparison(self):
         rows = mapping.compute('antiuav410')
-        for name in ('baseline', 'spmtrack'):
-            self.assertEqual(rows[name]['model']['classes'], ['SPMTrackInference_DINOv2', 'SPMTrack_DINOv2'])
-            self.assertEqual((rows[name]['train_templates'], rows[name]['train_search_frames']), (3, 2))
-        self.assertEqual(rows['stcm_base']['model']['classes'], ['STCMTrackInference_DINOv2', 'STCMTrack_DINOv2'])
-        self.assertEqual(rows['stcm_base']['train_templates'], 1)
+        self.assertEqual(rows['spmtrack']['model']['classes'], ['SPMTrackInference_DINOv2', 'SPMTrack_DINOv2'])
+        self.assertEqual((rows['spmtrack']['train_templates'], rows['spmtrack']['train_search_frames']), (3, 2))
+        for name in ('baseline', 'stcm_base'):
+            self.assertEqual(rows[name]['model']['classes'], ['STCMTrackInference_DINOv2', 'STCMTrack_DINOv2'])
+            self.assertEqual((rows[name]['train_templates'], rows[name]['train_search_frames']), (1, 3))
+            self.assertEqual((rows[name]['ltcp'], rows[name]['mcc'], rows[name]['rgtc']), (False, False, False))
+        self.assertEqual(rows['baseline']['shared_settings_sha256'], rows['stcm_base']['shared_settings_sha256'])
+
+    @staticmethod
+    def ablation_config(name, dataset='antiuav410', evaluation=False):
+        variants, datasets = mapping.parse_variants(mapping.SCRIPT.read_text(encoding='utf-8'))
+        info = variants[name]
+        mixins = ['disable_torch_compile'] + datasets[dataset] + info['variant_mixins']
+        if evaluation:
+            mixins.append('evaluation')
+        return mapping.build_config(info['method'], mixins)
+
+    def test_eight_ablations_share_the_complete_non_component_config(self):
+        for dataset in ('antiuav410', 'antiuav300'):
+            for evaluation in (False, True):
+                reference = mapping.shared_config(self.ablation_config('baseline', dataset, evaluation))
+                for name in mapping.COMPONENTS:
+                    with self.subTest(dataset=dataset, evaluation=evaluation, variant=name):
+                        config = self.ablation_config(name, dataset, evaluation)
+                        self.assertEqual(mapping.shared_config(config), reference)
+
+    def test_check_rejects_changes_to_backbone_training_and_post_processing(self):
+        original_rows = mapping.compute('antiuav410')
+        changes = (
+            ('backbone', lambda cfg: cfg['model']['backbone']['parameters'].update(name='ViT-S/14')),
+            ('optimizer', lambda cfg: cfg['run']['runner']['train']['optimization']['optimizer'].update(lr=0.001)),
+            ('sampling', lambda cfg: cfg['run']['data']['train']['siamese_training_pair_sampling'][
+                'positive_sample'].update(num_template_frames=3)),
+            ('loss', lambda cfg: cfg['run']['runner']['train']['criteria']['bbox_regression'].update(weight=2.)),
+            ('post_process', lambda cfg: cfg['run']['runner']['test']['evaluator']['pipeline'][
+                'post_process'].update(window_penalty=0.45)),
+        )
+        for label, change in changes:
+            with self.subTest(setting=label):
+                config = self.ablation_config('full')
+                change(config)
+                rows = copy.deepcopy(original_rows)
+                rows['full'].update(mapping.settings_facts(config))
+                self.assertTrue(any('non-component settings differ' in problem for problem in mapping.problems(rows)))
+
+    def test_check_rejects_inconsistent_component_parameters(self):
+        original_rows = mapping.compute('antiuav410')
+        for component in ('ltcp', 'ctr'):
+            with self.subTest(component=component):
+                config = self.ablation_config('full')
+                if component == 'ltcp':
+                    config['model']['ltcp']['memory_size'] = 3
+                else:
+                    config['run']['runner']['test']['evaluator']['pipeline']['ctr']['confidence_threshold'] = 0.5
+                rows = copy.deepcopy(original_rows)
+                rows['full'].update(mapping.settings_facts(config))
+                self.assertTrue(any('different component parameters' in problem for problem in mapping.problems(rows)))
+
+    def test_full_frame_input_is_only_a_ctr_requirement(self):
+        rows = mapping.compute('antiuav410')
+        rows['ltcp']['full_template_inputs']['test'] = True
+        self.assertTrue(any('full-template-image inputs' in problem for problem in mapping.problems(rows)))
 
     def test_shared_mixins_are_identical_copies(self):
         for name in ('disable_torch_compile', 'evaluation', 'eval_short', 'dataset_antiuav300'):
