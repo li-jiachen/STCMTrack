@@ -110,7 +110,7 @@
       "upstream": "config/SPMTrack/run.yaml",
       "status": "ported",
       "upstream_sha256": "49c0aada77b97f5675d7ed3a4b0f4f972a1224779e2139f060157bbdbfd8a678",
-      "deviation": "Structure and inference settings kept. Anti-UAV410/Anti-UAV datasets, 80 epochs, batch 4, 2048/4096 samples per epoch, torch.compile off and efficiency assessment off follow the setup shared with STCMTrack (Sec. 3.1) instead of upstream (170 epochs, batch 128, GOT-10k/LaSOT/TrackingNet/COCO)."
+      "deviation": "Model structure and inference settings kept. Anti-UAV410/Anti-UAV datasets and 80 epochs follow Sec. 3.1 instead of upstream (170 epochs, GOT-10k/LaSOT/TrackingNet/COCO). Public training settings shared with STCMTrack: batch 4, 2048/4096 samples per epoch, AdamW lr 1e-4 and weight decay 0.1 without parameter overrides, cosine schedule without warm-up and lr_min 0, binary center BCE and GIoU with equal weights, mean frame loss, torch.compile and efficiency assessment off. Batch/sample counts, warm-up, targets and loss reduction are not specified in the paper and remain unverified against the original experiments. Original three-template/two-search interval sampling and per-image augmentation are retained."
     },
     {
       "local": "config/SPMTrack/dinov2/config.yaml",

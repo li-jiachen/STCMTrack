@@ -42,9 +42,9 @@ def config():
 
 class IntegrationTests(unittest.TestCase):
     def test_all_dataset_variant_configs(self):
-        # The eight ablation rows share STCMTrack; `stcm_base` aliases the all-off baseline.
-        # The independent `spmtrack` comparison is covered by tests/test_spmtrack_static.py.
-        variants = {'baseline': (), 'stcm_base': (), 'ltcp': ('ltcp',), 'mcc': ('ctr', 'ctr_no_rgtc'),
+        # Table 2 rows 2-8 use STCMTrack. Row 1 uses the independent SPMTrack
+        # model and is covered by tests/test_spmtrack_static.py.
+        variants = {'ltcp': ('ltcp',), 'mcc': ('ctr', 'ctr_no_rgtc'),
                     'rgtc': ('ctr', 'ctr_no_mcc'), 'ltcp_mcc': ('ltcp', 'ctr', 'ctr_no_rgtc'),
                     'ltcp_rgtc': ('ltcp', 'ctr', 'ctr_no_mcc'), 'mcc_rgtc': ('ctr',), 'full': ('ltcp', 'ctr')}
         for dataset in ('antiuav410', 'antiuav300'):

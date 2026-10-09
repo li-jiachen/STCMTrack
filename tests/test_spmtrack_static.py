@@ -72,18 +72,31 @@ class VariantMappingTests(unittest.TestCase):
             with self.subTest(dataset=dataset):
                 rows = mapping.compute(dataset)
                 self.assertEqual(mapping.problems(rows), [])
-                self.assertEqual(set(rows), {'baseline', 'spmtrack', 'stcm_base', 'ltcp', 'mcc', 'rgtc',
+                self.assertEqual(set(rows), {'baseline', 'ltcp', 'mcc', 'rgtc',
                                              'ltcp_mcc', 'ltcp_rgtc', 'mcc_rgtc', 'full'})
 
-    def test_module_baseline_and_separate_spmtrack_comparison(self):
+    def test_table2_row1_is_independent_spmtrack(self):
         rows = mapping.compute('antiuav410')
-        self.assertEqual(rows['spmtrack']['model']['classes'], ['SPMTrackInference_DINOv2', 'SPMTrack_DINOv2'])
-        self.assertEqual((rows['spmtrack']['train_templates'], rows['spmtrack']['train_search_frames']), (3, 2))
-        for name in ('baseline', 'stcm_base'):
+        baseline = rows['baseline']
+        self.assertEqual(baseline['method'], 'SPMTrack')
+        self.assertEqual(baseline['model']['classes'], ['SPMTrackInference_DINOv2', 'SPMTrack_DINOv2'])
+        self.assertEqual((baseline['train_templates'], baseline['train_search_frames']), (3, 2))
+        self.assertEqual((baseline['ltcp'], baseline['mcc'], baseline['rgtc']), (False, False, False))
+        self.assertEqual(baseline['window_penalty'], .45)
+        for name in mapping.STCM_VARIANTS:
             self.assertEqual(rows[name]['model']['classes'], ['STCMTrackInference_DINOv2', 'STCMTrack_DINOv2'])
             self.assertEqual((rows[name]['train_templates'], rows[name]['train_search_frames']), (1, 3))
-            self.assertEqual((rows[name]['ltcp'], rows[name]['mcc'], rows[name]['rgtc']), (False, False, False))
-        self.assertEqual(rows['baseline']['shared_settings_sha256'], rows['stcm_base']['shared_settings_sha256'])
+        self.assertNotEqual(baseline['shared_settings_sha256'], rows['ltcp']['shared_settings_sha256'])
+        self.assertTrue(any('train_templates' in conflict for conflict in mapping.ablation_conflicts(rows)))
+        self.assertTrue(any('window_penalty' in conflict for conflict in mapping.ablation_conflicts(rows)))
+
+    def test_check_rejects_extra_variants_and_a_relabelled_stcm_baseline(self):
+        rows = mapping.compute('antiuav410')
+        rows['stcm_base'] = copy.deepcopy(rows['ltcp'])
+        self.assertTrue(any('exactly the eight' in problem for problem in mapping.problems(rows)))
+        rows = mapping.compute('antiuav410')
+        rows['baseline'] = copy.deepcopy(rows['ltcp'])
+        self.assertTrue(any('independent SPMTrack baseline' in problem for problem in mapping.problems(rows)))
 
     @staticmethod
     def ablation_config(name, dataset='antiuav410', evaluation=False):
@@ -94,14 +107,25 @@ class VariantMappingTests(unittest.TestCase):
             mixins.append('evaluation')
         return mapping.build_config(info['method'], mixins)
 
-    def test_eight_ablations_share_the_complete_non_component_config(self):
+    def test_seven_stcm_rows_share_the_complete_non_component_config(self):
         for dataset in ('antiuav410', 'antiuav300'):
             for evaluation in (False, True):
-                reference = mapping.shared_config(self.ablation_config('baseline', dataset, evaluation))
-                for name in mapping.COMPONENTS:
+                reference = mapping.shared_config(self.ablation_config('ltcp', dataset, evaluation))
+                for name in mapping.STCM_VARIANTS:
                     with self.subTest(dataset=dataset, evaluation=evaluation, variant=name):
                         config = self.ablation_config(name, dataset, evaluation)
                         self.assertEqual(mapping.shared_config(config), reference)
+
+    def test_all_eight_rows_share_explicit_paper_settings_and_prediction_heads(self):
+        for dataset in ('antiuav410', 'antiuav300'):
+            rows = mapping.compute(dataset)
+            reference = rows['ltcp']
+            for name, row in rows.items():
+                with self.subTest(dataset=dataset, variant=name):
+                    self.assertEqual(row['paper_settings'], reference['paper_settings'])
+                    self.assertEqual(row['model']['heads'], reference['model']['heads'])
+                    self.assertEqual(row['model']['head_definitions_sha256'],
+                                     reference['model']['head_definitions_sha256'])
 
     def test_check_rejects_changes_to_backbone_training_and_post_processing(self):
         original_rows = mapping.compute('antiuav410')
@@ -159,7 +183,7 @@ class SPMTrackConfigTests(unittest.TestCase):
         tmoe = self.cfg['model']['tmoe']
         self.assertEqual((tmoe['r'], tmoe['alpha'], tmoe['expert_nums'], tmoe['init_method']), (64, 64, 4, 'bert'))
 
-    def test_training_follows_upstream_structure(self):
+    def test_training_keeps_spm_structure_and_uses_the_paper_loss(self):
         train = self.cfg['run']['data']['train']
         positive = train['siamese_training_pair_sampling']['positive_sample']
         self.assertEqual((positive['sample_mode'], positive['num_template_frames'], positive['num_search_frames'],
@@ -171,8 +195,8 @@ class SPMTrackConfigTests(unittest.TestCase):
         self.assertTrue(deit['joint'])
         self.assertNotIn('temporal_consistent_crops', train['transform'])
         criteria = self.cfg['run']['runner']['train']['criteria']
-        self.assertEqual(criteria['frame_loss_reduction'], 'sum')
-        self.assertTrue(criteria['classification']['iou_aware_classification_score'])
+        self.assertEqual(criteria.get('frame_loss_reduction', 'mean'), 'mean')
+        self.assertFalse(criteria['classification']['iou_aware_classification_score'])
 
     def test_evaluation_follows_upstream_inference(self):
         pipeline = self.cfg['run']['runner']['test']['evaluator']['pipeline']
@@ -193,6 +217,14 @@ class SPMTrackConfigTests(unittest.TestCase):
         self.assertEqual(self.cfg['run']['data']['train']['global_batch_size'], 4)
         self.assertFalse(self.cfg['run']['runner']['train']['torch_compile']['enabled'])
         self.assertFalse(self.cfg['run']['efficiency_assessment']['enabled'])
+
+    def test_optimizer_and_losses_share_the_paper_configuration(self):
+        stcm = load_yaml(str(ROOT / 'config/STCMTrack/dinov2/config.yaml'))
+        self.assertEqual(mapping.paper_settings(self.cfg), mapping.paper_settings(stcm))
+        optimization = self.cfg['run']['runner']['train']['optimization']
+        self.assertNotIn('per_parameter', optimization['optimizer'])
+        self.assertEqual(optimization['lr_scheduler']['parameters']['warmup_epochs'], 0)
+        self.assertEqual(optimization['lr_scheduler']['parameters']['lr_min'], 0.)
 
     def test_stcmtrack_config_keeps_its_own_definitions(self):
         stcm = load_yaml(str(ROOT / 'config/STCMTrack/dinov2/config.yaml'))

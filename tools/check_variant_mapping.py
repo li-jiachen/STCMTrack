@@ -29,13 +29,14 @@ from trackit.core.boot.funcs.mixin import apply_static_mixin_rules  # noqa: E402
 SCRIPT = ROOT / 'test_stcmtrack.sh'
 CONFIG_ROOT = ROOT / 'config'
 CONFIG_NAME = 'dinov2'
-# The eight module combinations of Table 2. Row 1 uses the same STCMTrack base as rows 2-8;
-# the independent SPMTrack comparison is deliberately separate. No published score is inferred.
+# Table 2 row 1 is the independent SPMTrack baseline; rows 2-8 are STCMTrack configurations.
+# The mapping does not infer that the published scores were produced by the current code.
 COMPONENTS = {
     'baseline': (False, False, False), 'ltcp': (True, False, False), 'mcc': (False, True, False),
     'rgtc': (False, False, True), 'ltcp_mcc': (True, True, False), 'ltcp_rgtc': (True, False, True),
     'mcc_rgtc': (False, True, True), 'full': (True, True, True),
 }
+STCM_VARIANTS = tuple(name for name in COMPONENTS if name != 'baseline')
 
 
 # ----------------------------------------------------------------------------- shell
@@ -94,7 +95,8 @@ def config_facts(config):
     ctr_on = bool(ctr and ctr.get('enabled', False))
     train = config['run']['data']['train']
     positive = train['siamese_training_pair_sampling']['positive_sample']
-    criteria = config['run']['runner']['train']['criteria']
+    criteria = copy.deepcopy(config['run']['runner']['train']['criteria'])
+    criteria.setdefault('frame_loss_reduction', 'mean')
     return {
         'config_type': config['type'],
         'ltcp': bool(config['model'].get('ltcp', {}).get('enabled', False)),
@@ -109,8 +111,31 @@ def config_facts(config):
         'frame_loss_reduction': criteria.get('frame_loss_reduction', 'mean'),
         'iou_aware_classification': criteria['classification']['iou_aware_classification_score'],
         'stage1_epochs': config['run']['num_epochs'],
+        'paper_settings': paper_settings(config),
         'full_template_inputs': {task: bool(config['run']['data'][task]['transform'].get(
             'with_full_template_image', False)) for task in ('test', 'eval')},
+    }
+
+
+def paper_settings(config):
+    """The explicit common settings in Sec. 3.1, independent of model-specific structure."""
+    optimization = config['run']['runner']['train']['optimization']
+    criteria = copy.deepcopy(config['run']['runner']['train']['criteria'])
+    criteria.setdefault('frame_loss_reduction', 'mean')
+    return {
+        'backbone': copy.deepcopy(config['model']['backbone']),
+        'template_size': config['common']['template_size'],
+        'search_region_size': config['common']['search_region_size'],
+        'response_map_size': config['common']['response_map_size'],
+        'stage1_epochs': config['run']['num_epochs'],
+        'optimizer': copy.deepcopy(optimization['optimizer']),
+        'scheduler': copy.deepcopy(optimization['lr_scheduler']),
+        'criteria': copy.deepcopy(criteria),
+        'metric_handlers': {
+            task: [handler['type'] for handler in config['run']['data'][task][
+                'result_collector']['dispatch'][0]['handlers']]
+            for task in ('test', 'eval')
+        },
     }
 
 
@@ -143,7 +168,8 @@ def settings_facts(config):
         ctr.pop(key, None)
     return {'shared_settings_sha256': fingerprint(shared_config(config)),
             'ltcp_parameters_sha256': fingerprint(ltcp) if ltcp else None,
-            'ctr_parameters_sha256': fingerprint(ctr) if ctr else None}
+            'ctr_parameters_sha256': fingerprint(ctr) if ctr else None,
+            'ltcp_parameters': ltcp or None, 'ctr_parameters': ctr or None}
 
 
 # ----------------------------------------------------------------------------- AST
@@ -254,13 +280,43 @@ def code_reach(closure):
             'stcmtrack_package': any(m.startswith('trackit.models.methods.STCMTrack') for m in closure)}
 
 
+def source_structure_sha256(path):
+    """Ignore comments and documentation when comparing the shared prediction-head implementation."""
+    tree = ast.parse(path.read_text(encoding='utf-8'))
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)) \
+                and node.body and isinstance(node.body[0], ast.Expr) \
+                and isinstance(node.body[0].value, ast.Constant) \
+                and isinstance(node.body[0].value.value, str):
+            node.body.pop(0)
+    return hashlib.sha256(ast.dump(tree, include_attributes=False).encode('utf-8')).hexdigest()
+
+
 def resolve_model(config_type):
     registry = dispatch_table(ROOT / 'trackit/models/methods/builder.py', {"config['type']"})
     builder_module = registry[config_type]
     builder_file = module_file(builder_module)
     classes = returned_classes(builder_file, builder_module.rpartition('.')[0])
     chains = {name: class_bases(module, name) for name, module in classes.items()}
+    heads, definitions = [], []
+    for name, module in classes.items():
+        if 'Inference' in name:
+            continue
+        source = module_file(module)
+        tree = ast.parse(source.read_text(encoding='utf-8'))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Assign) and any(
+                    isinstance(target, ast.Attribute) and ast.unparse(target) == 'self.head'
+                    for target in node.targets) and isinstance(node.value, ast.Call):
+                heads.append(ast.unparse(node.value))
+                if isinstance(node.value.func, ast.Name):
+                    for imported in ast.walk(tree):
+                        if isinstance(imported, ast.ImportFrom) and any(
+                                (alias.asname or alias.name) == node.value.func.id for alias in imported.names):
+                            definition = module_file(absolute_import_base(source, imported))
+                            definitions.append(source_structure_sha256(definition))
     return {'builder': builder_module, 'classes': sorted(classes), 'bases': chains,
+            'heads': sorted(set(heads)), 'head_definitions_sha256': sorted(set(definitions)),
             'reach': code_reach(import_closure(builder_file))}
 
 
@@ -293,11 +349,16 @@ def compute(dataset='antiuav410'):
 
 def problems(rows):
     found = []
+    if set(rows) != set(COMPONENTS):
+        found.append(f'Expected exactly the eight Table 2 variants, got {sorted(rows)}')
     for name, row in rows.items():
         if row['method'] != row['config_type']:
             found.append(f'{name}: script method {row["method"]} but config type {row["config_type"]}')
         if row['script_use_ltcp'] != row['ltcp']:
             found.append(f'{name}: script use_ltcp={row["script_use_ltcp"]} but config LTCP={row["ltcp"]}')
+        if row['model']['heads'] != ['MlpAnchorFreeHead(self.embed_dim, self.x_size)'] \
+                or len(row['model']['head_definitions_sha256']) != 1:
+            found.append(f'{name}: expected the shared center/box MLP prediction head')
         if name in COMPONENTS and (row['ltcp'], row['mcc'], row['rgtc']) != COMPONENTS[name]:
             found.append(f'{name}: components {(row["ltcp"], row["mcc"], row["rgtc"])} instead of '
                          f'{COMPONENTS[name]}')
@@ -324,38 +385,73 @@ def problems(rows):
             if row['post_process'] != 'box_with_score_map' or row['window_penalty'] != 0.:
                 found.append(f'{name}: STCMTrack post-processing must be the no-Hann definition')
     spm_names = {n for n, r in rows.items() if r['method'] == 'SPMTrack'}
-    if spm_names != {'spmtrack'}:
-        found.append(f'The separate SPMTrack comparison must be only spmtrack, got {sorted(spm_names)}')
-    for name in ('baseline', 'stcm_base'):
-        if name not in rows or rows[name]['method'] != 'STCMTrack':
-            found.append(f'{name} must exist and build STCMTrack')
-        elif (rows[name]['ltcp'], rows[name]['mcc'], rows[name]['rgtc']) != (False, False, False):
-            found.append(f'{name} must disable all three components')
-    controlled = [rows[name] for name in COMPONENTS if name in rows]
-    if len(controlled) != len(COMPONENTS):
-        found.append('All eight module combinations must exist')
+    if spm_names != {'baseline'}:
+        found.append(f'Table 2 row 1 must be the independent SPMTrack baseline, got {sorted(spm_names)}')
+    controlled = [rows[name] for name in STCM_VARIANTS if name in rows]
+    if len(controlled) != len(STCM_VARIANTS):
+        found.append('All seven STCMTrack configurations (Table 2 rows 2-8) must exist')
     if controlled:
         reference = controlled[0]
-        for name in COMPONENTS:
+        for name in STCM_VARIANTS:
             if name not in rows:
                 continue
             row = rows[name]
             if row['method'] != 'STCMTrack' or row['model'] != reference['model'] \
                     or row['pipeline'] != reference['pipeline']:
-                found.append(f'{name}: all eight ablations must use the same STCMTrack model and pipeline')
+                found.append(f'{name}: Table 2 rows 2-8 must use the same STCMTrack model and pipeline')
             for key in ('shared_settings_sha256', 'eval_shared_settings_sha256'):
                 if row[key] != reference[key]:
-                    found.append(f'{name}: non-component settings differ from baseline ({key})')
+                    found.append(f'{name}: non-component settings differ from ltcp ({key})')
             needs_full_frame = row['mcc'] or row['rgtc']
             if any(value != needs_full_frame for value in row['full_template_inputs'].values()):
                 found.append(f'{name}: full-template-image inputs must be enabled exactly when MCC or RGTC is used')
         for key in ('ltcp_parameters_sha256', 'ctr_parameters_sha256'):
             if len({row[key] for row in controlled if row[key] is not None}) > 1:
                 found.append(f'Ablations use different component parameters ({key})')
-        if 'stcm_base' in rows and any(rows['stcm_base'][key] != reference[key] for key in (
-                'shared_settings_sha256', 'eval_shared_settings_sha256')):
-            found.append('stcm_base must be an alias of baseline with identical settings')
+        for name, row in rows.items():
+            if row['paper_settings'] != reference['paper_settings']:
+                found.append(f'{name}: explicit common paper settings differ from ltcp')
+            if row['model']['heads'] != reference['model']['heads'] or row['model'][
+                    'head_definitions_sha256'] != reference['model']['head_definitions_sha256']:
+                found.append(f'{name}: prediction head construction differs from ltcp')
+    for name, row in rows.items():
+        settings = row['paper_settings']
+        optimizer = settings['optimizer']
+        criteria = settings['criteria']
+        expected = (
+            settings['backbone']['type'] == 'DINOv2',
+            settings['backbone']['parameters']['name'] == 'ViT-B/14',
+            settings['template_size'] == [196, 196],
+            settings['search_region_size'] == [378, 378],
+            settings['stage1_epochs'] == 80,
+            optimizer['type'] == 'AdamW', optimizer['lr'] == 1.e-4,
+            optimizer['weight_decay'] == .1,
+            settings['scheduler']['sched'] == 'cosine',
+            criteria['classification']['type'] == 'binary_cross_entropy',
+            not criteria['classification']['iou_aware_classification_score'],
+            criteria['bbox_regression']['type'] == 'GIoU',
+            criteria['classification']['weight'] == criteria['bbox_regression']['weight'] == 1.,
+        )
+        if not all(expected):
+            found.append(f'{name}: configuration differs from the explicit Sec. 3.1 settings')
+        ltcp, ctr = row['ltcp_parameters'], row['ctr_parameters']
+        if ltcp and (ltcp['memory_size'] != 2 or ltcp.get('store_enhanced_memory', False)):
+            found.append(f'{name}: LTCP must keep the two most recent raw search-token frames')
+        if ctr and (ctr['confidence_threshold'] != .40 or ctr['ransac_reproj_threshold'] != 2.0
+                    or ctr.get('foreground_mask_mode', 'mog2_residual_union') != 'mog2_residual_union'):
+            found.append(f'{name}: CTR configuration differs from the Sec. 2.3 settings')
     return found
+
+
+def ablation_conflicts(rows):
+    """Report the original SPMTrack differences, not silently relabel them as component switches."""
+    if 'baseline' not in rows or 'ltcp' not in rows:
+        return []
+    baseline, stcm = rows['baseline'], rows['ltcp']
+    fields = ('train_templates', 'train_search_frames', 'train_sample_mode', 'pipeline_type',
+              'post_process', 'window_penalty')
+    return [f'Row 1 SPMTrack {field}={baseline[field]!r}; rows 2-8 STCMTrack {field}={stcm[field]!r}'
+            for field in fields if baseline[field] != stcm[field]]
 
 
 def markdown(rows):
@@ -375,6 +471,8 @@ def markdown(rows):
                    f"{mark(row['rgtc'])} | {row['train_templates']} / {row['train_search_frames']} "
                    f"({row['train_sample_mode']}) | `{row['post_process']}` (Hann {row['window_penalty']}) | "
                    f"`{row['pipeline']['main_class']}` | {reachable} |")
+    out.append('\nRow 1 is independent SPMTrack; only rows 2-8 share the complete non-component configuration.')
+    out.extend(f'- {conflict}' for conflict in ablation_conflicts(rows))
     return '\n'.join(out)
 
 

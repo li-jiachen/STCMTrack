@@ -4,6 +4,9 @@ import torch.nn as nn
 from collections import OrderedDict
 from timm.layers import trunc_normal_
 from trackit.models.backbone.dinov2 import DinoVisionTransformer, interpolate_pos_encoding
+from trackit.core.utils.stcmtrack_weights import (
+    LEGACY_SCALING_KEYS, PUBLISHED_LEGACY_SHA256, authenticate_published_legacy,
+    checkpoint_scaling_format, validate_query_numerics)
 from .modules.patch_embed import PatchEmbedNoSizeCheck
 from .modules.tmoe.apply import find_all_frozen_nn_linear_names, apply_tmoe
 from .modules.head.mlp import MlpAnchorFreeHead
@@ -34,6 +37,9 @@ class STCMTrack_DINOv2(nn.Module):
                                                            num_prefix_tokens=0, interpolate_offset=0))
 
         self._base_checkpoint_loaded = False
+        self._base_checkpoint_format = None
+        self._legacy_base_sha256 = None
+        self._pretrained_backbone_loaded = bool(getattr(vit, '_pretrained_weights_loaded', False))
         # TMoE scaling: stored in every checkpoint and compared with the configuration when one is loaded.
         self.register_buffer('_expert_alpha', torch.tensor(float(expert_alpha), dtype=torch.float64))
         self.register_buffer('_use_rsexpert', torch.tensor(bool(use_rsexpert)))
@@ -57,6 +63,10 @@ class STCMTrack_DINOv2(nn.Module):
         self.head = MlpAnchorFreeHead(self.embed_dim, self.x_size)
         self.ltcp_config = LTCPConfig.from_dict(ltcp_config)
         self.ltcp = LocalEnhancedTemporalContextPropagation(self.embed_dim, self.ltcp_config) if self.ltcp_config.enabled else None
+        # Capture stage-1 parameters before stage 2 freezes them. An incremental base
+        # must contain every one of these parameters, including queries and prediction heads.
+        self._tracking_trainable_keys = frozenset(name for name, parameter in self.named_parameters()
+                                                 if parameter.requires_grad and not name.startswith('ltcp.'))
         if self.ltcp_config.enabled and self.ltcp_config.train_only:
             # Training stage 2: only LTCP is optimized; backbone adapters, queries and heads stay frozen.
             self._freeze_except_ltcp()
@@ -120,7 +130,70 @@ class STCMTrack_DINOv2(nn.Module):
 
     _checkpoint_metadata_keys = ('_expert_alpha', '_use_rsexpert')
 
+    def load_checkpoint_file(self, state_file, strict: bool = False):
+        """Load a full checkpoint or an authenticated original .bin release file.
+
+        The original release stores training increments, so its frozen DINOv2 weights
+        must have been loaded first. Its hashes identify the published pair; they do
+        not provide the training-snapshot provenance of newer exports.
+        """
+        from safetensors.torch import load_file
+        state = load_file(str(state_file), device='cpu')
+        if checkpoint_scaling_format(state) == 'modern':
+            return self.load_state_dict(state, strict=strict)
+        payload = set(state) - set(LEGACY_SCALING_KEYS)
+        component = 'ltcp' if payload and all(key.startswith('ltcp.') for key in payload) else 'base'
+        digest = authenticate_published_legacy(state_file, component)
+        aliases = dict(zip(LEGACY_SCALING_KEYS, self._checkpoint_metadata_keys))
+        canonical = OrderedDict((aliases.get(key, key), value)
+                                for key, value in state.items())
+        self._validate_tensor_shapes_and_scaling(canonical)
+        if component == 'ltcp':
+            expected = {key for key in self.state_dict() if key.startswith('ltcp.')}
+            if payload != expected or self.ltcp is None:
+                raise ValueError('LTCP adapter checkpoint does not match this model')
+            if (not self._base_checkpoint_loaded or self._base_checkpoint_format != 'legacy'
+                    or self._legacy_base_sha256 != PUBLISHED_LEGACY_SHA256['base']):
+                raise ValueError('Load the original published legacy base before its LTCP adapter')
+        else:
+            if payload != self._tracking_trainable_keys:
+                missing = sorted(self._tracking_trainable_keys - payload)
+                unexpected = sorted(payload - self._tracking_trainable_keys)
+                raise ValueError(f'Incomplete or incompatible legacy base: missing={missing[:8]}, '
+                                 f'unexpected={unexpected[:8]}')
+            if not self._pretrained_backbone_loaded:
+                raise ValueError('Legacy base requires successfully loaded pretrained DINOv2 backbone weights')
+        # Fill only the known frozen parameters from the verified pretrained model.
+        # Validation above completes before the first tensor is copied.
+        complete = self.state_dict()
+        complete.update(canonical)
+        result = super().load_state_dict(complete, strict=True)
+        if component == 'base':
+            self._base_checkpoint_loaded = True
+            self._base_checkpoint_format = 'legacy'
+            self._legacy_base_sha256 = digest
+        return result
+
+    def _validate_tensor_shapes_and_scaling(self, state):
+        expected = self.state_dict()
+        unexpected = set(state) - set(expected)
+        if unexpected:
+            raise ValueError(f'Unexpected checkpoint keys: {sorted(unexpected)[:8]}')
+        for key, value in state.items():
+            if not isinstance(value, torch.Tensor) or value.shape != expected[key].shape:
+                raise ValueError(f'Checkpoint tensor shape mismatch: {key}')
+        if 'track_query' in state and 'query_embed' in state:
+            validate_query_numerics(state['track_query'].detach().cpu().double().numpy(),
+                                    state['query_embed'].detach().cpu().double().numpy())
+        for key in self._checkpoint_metadata_keys:
+            if key not in state:
+                raise ValueError('Not an STCMTrack checkpoint: TMoE scaling entries are missing')
+            if state[key].item() != getattr(self, key).item():
+                raise ValueError(f'Checkpoint/configuration mismatch: {key}')
+
     def load_state_dict(self, state_dict: Mapping[str, Any], strict: bool = True, **kwargs):
+        if checkpoint_scaling_format(state_dict) == 'legacy':
+            raise ValueError('Legacy incremental weights must be authenticated with load_checkpoint_file')
         # Top-level entries whose names start with an underscore are checkpoint metadata, not network weights;
         # the TMoE scaling is the only metadata this model reads.
         state = OrderedDict((key, value) for key, value in state_dict.items()
@@ -130,9 +203,7 @@ class STCMTrack_DINOv2(nn.Module):
             raise ValueError('Not an STCMTrack checkpoint: the TMoE scaling entries (_expert_alpha, _use_rsexpert) '
                              'are missing. Use a checkpoint written by train_stcmtrack.sh or '
                              'tools/export_stcmtrack_weights.py.')
-        for key in self._checkpoint_metadata_keys:
-            if state[key].item() != getattr(self, key).item():
-                raise ValueError(f'Checkpoint/configuration mismatch: {key}')
+        self._validate_tensor_shapes_and_scaling(state)
         supplied_ltcp = {key for key in state if key.startswith('ltcp.')}
         expected_ltcp = {key for key in self.state_dict() if key.startswith('ltcp.')}
         if supplied_ltcp and supplied_ltcp != expected_ltcp:
@@ -142,6 +213,8 @@ class STCMTrack_DINOv2(nn.Module):
         if adapter_only:
             if not self._base_checkpoint_loaded:
                 raise ValueError('Load the matching full base checkpoint before the LTCP adapter')
+            if self._base_checkpoint_format == 'legacy':
+                raise ValueError('Cannot mix a modern LTCP adapter with the original legacy base')
             if self.ltcp is None or payload != {key for key in self.state_dict() if key.startswith('ltcp.')}:
                 raise ValueError('LTCP adapter checkpoint does not match this model')
         else:
@@ -149,7 +222,11 @@ class STCMTrack_DINOv2(nn.Module):
             missing = required - set(state)
             if missing:
                 raise ValueError(f'Incomplete full-model checkpoint: {sorted(missing)[:8]}')
+        if strict and set(self.state_dict()) - set(state):
+            raise ValueError('Incomplete checkpoint for strict loading')
         result = super().load_state_dict(state, strict=strict, **kwargs)
         if any(key.startswith('head.') for key in state):
             self._base_checkpoint_loaded = True
+            self._base_checkpoint_format = 'modern'
+            self._legacy_base_sha256 = None
         return result

@@ -1,25 +1,31 @@
 # Model weights
 
-The [v1.0.0 release](https://github.com/li-jiachen/STCMTrack/releases/tag/v1.0.0) provides two Anti-UAV410 weight files; they are not stored in Git. `test_stcmtrack.sh` uses these filenames by default when the files are placed in this directory:
+The [v1.0.0 release](https://github.com/li-jiachen/STCMTrack/releases/tag/v1.0.0) contains the two original **Anti-UAV410** files. Place them in this directory:
 
 | File | Content |
 |---|---|
-| `stcmtrack_base.bin` | STCMTrack tracking network, Anti-UAV410 |
-| `stcmtrack_ltcp.bin` | LTCP gate, Anti-UAV410 |
+| `stcmtrack_base.bin` | Tracking adapters, queries, token embeddings and prediction heads |
+| `stcmtrack_ltcp.bin` | LTCP gate |
 
-The `.bin` extension is a filename convention: these files use the Safetensors format, not PyTorch pickle.
+Both files use Safetensors despite the `.bin` extension. The base is an incremental checkpoint: the frozen backbone comes from the official pretrained DINOv2 ViT-B/14 weights, which the model builder downloads on first use. The loader recognizes the original checkpoint layout and checks file identity, required parameters, shapes, TMoE scaling and query numerical range before loading. A randomly initialized backbone is refused.
 
-**Current release compatibility:** the two v1.0.0 files use an older checkpoint layout. Their scaling fields are named `expert_alpha` / `use_rsexpert`, while the current loader expects `_expert_alpha` / `_use_rsexpert`. They also lack the required source metadata, and the base file does not include the frozen backbone. Changing their filenames does not make them compatible. This does not establish that the original weights are corrupt or unusable with their original model and matching DINOv2 backbone. Evaluation with the current code requires a complete checkpoint exported as described below.
+**Current release limitation:** the original base contains `track_query` and `query_embed` with maximum absolute values of approximately 4.03e28 and 9.85e28. Their combined variance exceeds the FP32 range. With the official pretrained backbone, a CPU FP32 test produced NaNs in the first LayerNorm and attention layer. Evaluation now rejects this checkpoint with a specific diagnostic. The original training code and a valid training checkpoint are needed to determine why these values were saved; the stored files have not been changed or repaired.
 
-Other locations can be passed with `BASE_WEIGHT=...` and `LTCP_WEIGHT=...`.
+```bash
+python tools/check_stcmtrack_weights.py \
+  --base weights/stcmtrack_base.bin --ltcp weights/stcmtrack_ltcp.bin
+DEVICE_IDS=0 ./test_stcmtrack.sh
+```
 
-## STCMTrack
+The check currently reports query overflow for the released base. The evaluation command requires a checkpoint that passes validation.
 
-For checkpoints exported with the current code, the base file contains the complete tracking network (including the frozen DINOv2 backbone), and the LTCP file contains the gate parameters of LTCP. The base file is always loaded first; variants with LTCP load the LTCP file second.
+The default `VARIANT=full` loads a validated base first and the LTCP gate second, with MCC and RGTC enabled. Table 2 rows 2-8 share the STCMTrack base; rows using LTCP also load the gate. `BASE_WEIGHT` and `LTCP_WEIGHT` accept other file locations. See [the eight configurations](../docs/ABLATION.md).
 
-All eight component ablations use the same base file. `VARIANT=baseline` (alias `stcm_base`) disables LTCP, MCC and RGTC and loads only this STCMTrack base file. The LTCP variants additionally load the shared gate file. See [docs/ABLATION.md](../docs/ABLATION.md).
+The original files have no training-snapshot metadata. Their hashes verify their identity as the published pair; they do not prove the original training configuration or reproduce the paper's scores.
 
-Both files are exported from the same stage-2 training snapshot:
+## New training checkpoints
+
+Checkpoints produced by the current code contain the complete model, including the frozen backbone. Export a base and gate from the same stage-2 checkpoint:
 
 ```bash
 python tools/export_stcmtrack_weights.py /path/to/stage2/checkpoint/epoch_19/model.bin \
@@ -27,22 +33,16 @@ python tools/export_stcmtrack_weights.py /path/to/stage2/checkpoint/epoch_19/mod
   --ltcp-output weights/stcmtrack_ltcp.bin
 ```
 
-The export records the SHA-256 of the source snapshot in both files and writes `stcmtrack_base.manifest.json` with the SHA-256 of the two outputs. Omit `--ltcp-output` to export a stage-1 snapshot. `test_stcmtrack.sh` checks before every evaluation that the base and LTCP files come from the same snapshot; the check can also be run directly:
+These exports carry source-snapshot metadata and an output hash manifest. Evaluation checks that the base and gate originate from the same snapshot. Keep each pair together; mixing original release files with new exports is refused. Omit `--ltcp-output` for a stage-1 checkpoint.
+
+The release provides Anti-UAV410 weights only. `DATASET=antiuav300` requires separately trained files, named `stcmtrack_antiuav300_base.bin` and `stcmtrack_antiuav300_ltcp.bin` by default.
+
+## SPMTrack baseline
+
+Table 2 row 1, `VARIANT=baseline`, uses the independent SPMTrack model and its own checkpoint. Its weights are not included in this release. Copy the checkpoint produced by `train_spmtrack.sh` to `spmtrack_baseline.safetensors` (or `spmtrack_antiuav300_baseline.safetensors` for Anti-UAV).
 
 ```bash
-python tools/check_stcmtrack_weights.py \
-  --base weights/stcmtrack_base.bin \
-  --ltcp weights/stcmtrack_ltcp.bin
+VARIANT=baseline DEVICE_IDS=0 ./test_stcmtrack.sh
 ```
 
-Each benchmark requires its own pair of files. For separately trained Anti-UAV weights, `DATASET=antiuav300` defaults to `stcmtrack_antiuav300_base.bin` and `stcmtrack_antiuav300_ltcp.bin`; these are not included in the release. Do not combine the base file of one dataset with the LTCP file of the other.
-
-## Independent SPMTrack comparison
-
-`VARIANT=spmtrack` uses its own weight file for the separate Table 1 comparison. It is the `model.bin` written by `./train_spmtrack.sh`, copied to `weights/spmtrack_baseline.safetensors` (`weights/spmtrack_antiuav300_baseline.safetensors` for Anti-UAV); it contains the trainable parameters and the marker `_spmtrack_port_version`. These SPMTrack weights are not included in the release.
-
-```bash
-python tools/check_spmtrack_weights.py --weights weights/spmtrack_baseline.safetensors
-```
-
-STCMTrack weight files are refused by the SPMTrack comparison. A file without the marker, such as a checkpoint trained with the official SPMTrack code, is accepted only with `ALLOW_UNMARKED_SPMTRACK_WEIGHTS=1`. See [docs/SPMTRACK_BASELINE.md](../docs/SPMTRACK_BASELINE.md).
+STCMTrack weights cannot be used as the SPMTrack baseline. Official unmarked SPMTrack checkpoints require `ALLOW_UNMARKED_SPMTRACK_WEIGHTS=1`; see [SPMTrack baseline](../docs/SPMTRACK_BASELINE.md).

@@ -37,14 +37,13 @@ class LTCPConfig:
     gate_bias_init: float = -4.0  # initial b_g
     confidence_weight_init: float = 2.0  # initial weight of c^temp in W_g (the other weights start at zero)
     max_gate: float = 0.05  # g_max
-    store_enhanced_memory: bool = False  # False: the memory stores X_t before fusion
     memory_device: str = "cpu"
     memory_dtype: str = "float32"
     print_summary: bool = True
 
     def __post_init__(self):
         if self.enabled:
-            if self.memory_size != 2 or self.store_enhanced_memory:
+            if self.memory_size != 2:
                 raise ValueError('LTCP uses a memory of two search-token frames stored before fusion (m = 2)')
             if not 0.0 <= self.max_gate <= 1.0 or self.frame_softmax_temperature <= 0 or self.eps <= 0:
                 raise ValueError('Invalid LTCP gate, temperature or epsilon')
@@ -99,7 +98,7 @@ class LocalEnhancedTemporalContextPropagation(nn.Module):
             'LTCP summary:',
             f'  calls={stats.calls} memory_calls={stats.memory_calls} '
             f'avg_memory_frames={avg_memory_frames:.2f} memory_size={self.config.memory_size}',
-            f'  detach_memory={self.config.detach_memory} store_enhanced_memory={self.config.store_enhanced_memory} '
+            f'  detach_memory={self.config.detach_memory} memory_tokens=raw_search_tokens '
             f'memory_device={self.config.memory_device} memory_dtype={self.config.memory_dtype}',
             f'  stored_token_snapshots={stats.stored_tokens}',
         ]

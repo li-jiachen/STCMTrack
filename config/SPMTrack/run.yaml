@@ -2,15 +2,16 @@
 #
 # Structure and inference logic: official SPMTrack, github.com/WenRuiCai/SPMTrack,
 #   config/SPMTrack/run.yaml @ c581fe27231f3e16c38578e47daddadfaf6ffd7d  (three templates, two search
-#   frames, "interval" pair sampling, per-image flip/color augmentation, IoU-aware classification target,
-#   summed search-frame losses, per-parameter weight decay groups, Hann window 0.45, min object size 10).
+#   frames, "interval" pair sampling, per-image flip/color augmentation, Hann window 0.45, min object size 10).
 # Data, training budget and evaluation shared with STCMTrack (see docs/SPMTRACK_BASELINE.md; these settings are
 # not taken from upstream):
 #   * datasets: the Anti-UAV410 / Anti-UAV splits of config/_dataset/*.yaml; upstream's GOT-10k / LaSOT /
 #     TrackingNet / COCO paths and sampling weights are not used;
-#   * training budget: 80 epochs, global batch 4, 2048 train / 4096 val samples per epoch (the stage-1 budget
-#     of Sec. 3.1; upstream uses 170 epochs, batch 128, 131072 samples), torch.compile off like the rest of
-#     this repository, efficiency assessment off;
+#   * training: 80 epochs, AdamW lr 1e-4 / weight decay 0.1, cosine schedule, equally weighted BCE/GIoU;
+#   * shared implementation choices not specified in the paper: global batch 4, 2048 train / 4096 val
+#     samples per epoch, no warm-up or per-parameter decay overrides, hard center targets and mean frame
+#     loss; these require the original experiment configs for historical verification;
+#   * torch.compile and efficiency assessment off;
 #   * evaluation: the shared one_pass_evaluation_compatible handler and PyTracking export (metrics of Sec. 3.2).
 
 type: "default"
@@ -242,10 +243,6 @@ runner:
         lr: 1.e-4
         weight_decay: 0.1
         fused: false
-        per_parameter:
-          - type: "zero_1d_param_weight_decay"
-          - name_regex: "embed"
-            weight_decay: 0.
       grad_accumulation_steps: 1
       max_grad_norm: 1.0
       zero_grad_set_to_none: true
@@ -254,9 +251,9 @@ runner:
         sched: "cosine"
         per_iteration: true
         parameters:
-          lr_min: 1.e-6
-          warmup_prefix: true
-          warmup_epochs: 2
+          lr_min: 0.
+          warmup_prefix: false
+          warmup_epochs: 0
           warmup_lr: 1.e-7
       auto_mixed_precision:
         enabled: true
@@ -268,10 +265,10 @@ runner:
 
     criteria:
       type: "box_with_score_map"
-      frame_loss_reduction: "sum"   # official SPMTrack adds the two search-frame losses
+      frame_loss_reduction: "mean"
       classification:
         type: "binary_cross_entropy"
-        iou_aware_classification_score: true
+        iou_aware_classification_score: false
         weight: 1.
       bbox_regression:
         type: "GIoU"

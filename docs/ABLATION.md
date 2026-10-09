@@ -1,10 +1,10 @@
-# Component ablations
+# Table 2 ablations
 
-The eight combinations of LTCP, MCC and RGTC use the same STCMTrack tracking network. The evaluation variants correspond to the component columns of Table 2:
+The evaluation variants follow Table 2 of the paper. Row 1 uses the independent SPMTrack baseline; rows 2–8 use STCMTrack with the indicated components.
 
 | Row | `VARIANT` | LTCP | MCC | RGTC | Model |
 |---|---|---|---|---|---|
-| 1 | `baseline` (alias `stcm_base`) | off | off | off | STCMTrack |
+| 1 | `baseline` | off | off | off | SPMTrack |
 | 2 | `ltcp` | on | off | off | STCMTrack |
 | 3 | `mcc` | off | on | off | STCMTrack |
 | 4 | `rgtc` | off | off | on | STCMTrack |
@@ -13,11 +13,11 @@ The eight combinations of LTCP, MCC and RGTC use the same STCMTrack tracking net
 | 7 | `mcc_rgtc` | off | on | on | STCMTrack |
 | 8 | `full` | on | on | on | STCMTrack |
 
-`VARIANT=spmtrack` selects the independent SPMTrack comparison for Table 1. It uses its own model, training configuration and weights; it is not a ninth component ablation.
+## Training and weights
 
-## Shared training and weights
+Train the SPMTrack baseline separately with `./train_spmtrack.sh`. Its checkpoint is required for row 1 and is not included in the release. See [SPMTRACK_BASELINE.md](SPMTRACK_BASELINE.md).
 
-For each dataset, train the tracking network once for 80 epochs, then train only the LTCP gate for 20 epochs from that stage-1 checkpoint. MCC and RGTC have no trainable parameters and are enabled only during evaluation.
+For STCMTrack, train the tracking network for 80 epochs, then train only LTCP for 20 epochs with all other parameters frozen. MCC and RGTC have no trainable parameters and are used only during evaluation.
 
 ```bash
 TRAIN_STAGE=1 DEVICE_IDS=0 ./train_stcmtrack.sh
@@ -28,11 +28,13 @@ python tools/export_stcmtrack_weights.py /path/to/stage2/checkpoint/epoch_19/mod
   --ltcp-output weights/stcmtrack_ltcp.bin
 ```
 
-Use the same exported base file for all eight variants. Stage 2 freezes the base network, so it adds the LTCP gate without further training the backbone, adapters, queries or heads. Every variant with LTCP uses the same exported gate file; the other variants skip that file. Both files must come from the same stage-2 snapshot, as checked by `tools/check_stcmtrack_weights.py`. The older files in the v1.0.0 release do not meet the current loader's requirements; see [weights/README.md](../weights/README.md).
+Rows 2–8 share the STCMTrack base file. Rows with LTCP additionally load the same gate file; the other rows skip it. Newly exported files record their source snapshot. The loader recognizes the published incremental `.bin` format, but currently rejects the released base because its learned query values overflow FP32 LayerNorm. A valid checkpoint is required; see [weights/README.md](../weights/README.md).
 
-The variants share one first-frame template, three chronological search frames per training sample, binary center targets, the mean loss across those frames, AdamW and the cosine schedule. Evaluation shares the same STCMTrack post-processing, data split and metric implementation. The switches change only LTCP fusion, MCC search recentering and RGTC low-confidence correction. Search crops and subsequent states can consequently differ, as intended by these components.
+SPMTrack and STCMTrack share the paper's data splits, input sizes, 80-epoch base training budget, AdamW (learning rate 1e-4, weight decay 0.1), cosine schedule and equally weighted BCE/GIoU losses. STCMTrack adds the frozen-base LTCP training stage. Binary center targets, averaging search-frame losses, no warm-up and the batch/sampling budget are public implementation conventions not specified in the paper; the original experiment configurations must be checked before claiming reproduction. Each benchmark requires its own trained weights.
 
 ## Evaluation
+
+Place valid SPMTrack and STCMTrack checkpoints at the default paths described in [weights/README.md](../weights/README.md), then run:
 
 ```bash
 for variant in baseline ltcp mcc rgtc ltcp_mcc ltcp_rgtc mcc_rgtc full; do
@@ -40,17 +42,15 @@ for variant in baseline ltcp mcc rgtc ltcp_mcc ltcp_rgtc mcc_rgtc full; do
 done
 ```
 
-For Anti-UAV, set `DATASET=antiuav300` for both training stages and every evaluation. That dataset requires its own weights and must not reuse the Anti-UAV410 pair.
-
-Validate the model, component mapping and shared settings for each dataset:
+The paper's Table 2 uses the complete Anti-UAV410 test split. For the separate Anti-UAV benchmark, set `DATASET=antiuav300` for training and evaluation. Validate the variant mapping and shared settings with:
 
 ```bash
 python tools/check_variant_mapping.py --check
 python tools/check_variant_mapping.py --dataset antiuav300 --check
 ```
 
-## Conflict with the paper and reported scores
+## Remaining difference in the paper's description
 
-The paper identifies Table 2 row 1 as the SPMTrack baseline, while also stating that the backbone, prediction head and remaining experimental settings are shared across all eight configurations. The independent SPMTrack implementation differs from STCMTrack in more than these three switches: it uses three templates, a propagated query, query-based head-input reweighting, different training samples and targets, summed frame losses, warm-up and parameter-specific weight decay, and Hann-window post-processing.
+The paper calls row 1 SPMTrack and states that the remaining experimental settings are shared. The independent SPMTrack model retains three templates, propagated query state and query-based reweighting before the prediction heads, together with two-search-frame interval sampling, per-image augmentation, online templates and Hann-window post-processing. STCMTrack uses the first-frame template, a query encoded from the current joint features and LTCP features passed directly to the heads. The ViT backbone and MLP head architectures are shared, but these surrounding computations differ.
 
-Consequently, keeping that independent SPMTrack path as row 1 would not isolate LTCP, MCC and RGTC. The mapping above enforces a shared STCMTrack foundation for the eight component combinations. It does not establish that the new row 1 reproduces the paper's SPMTrack scores, or that the eight configurations reproduce the published numbers. Resolving that requires the original experiment configurations and a new evaluation; no paper results have been changed or relabeled here.
+Keeping the original SPMTrack baseline and the STCMTrack method therefore leaves differences beyond the three component switches. Aligning the common optimizer and loss settings does not eliminate that conflict or establish reproduction of the paper's numerical results. The published scores must be checked against the original experiment configurations and a complete evaluation.

@@ -31,8 +31,6 @@ from trackit.core.operator.numpy.bbox.format import bbox_get_center_point, bbox_
 from trackit.core.operator.numpy.bbox.utility.image import bbox_clip_to_image_boundary
 from trackit.core.operator.numpy.bbox.validity import bbox_is_valid
 
-_FOREGROUND_MASK_MODES = ('mog2_residual_union', 'mog2', 'residual')
-
 
 @dataclass
 class CTRConfig:
@@ -49,7 +47,6 @@ class CTRConfig:
     ransac_reproj_threshold: float = 2.0  # pixels
     max_center_shift_ratio: float = 1.0  # max |T_t(o_{t-1}) - o_{t-1}| as a fraction of the image diagonal
     # RGTC foreground evidence: M_t = M_t^mog2 U M_t^res.
-    foreground_mask_mode: str = 'mog2_residual_union'
     residual_mad_scale: float = 4.4478  # alpha in Eq. (5)
     mog2_history: int = 80
     mog2_var_threshold: float = 24.0
@@ -108,9 +105,6 @@ def build_ctr_module(config: Optional[dict]):
 
 class ConfidenceTriggeredRelocalization:
     def __init__(self, config: CTRConfig):
-        if config.foreground_mask_mode not in _FOREGROUND_MASK_MODES:
-            raise ValueError(f'Unknown foreground_mask_mode: {config.foreground_mask_mode}, '
-                             f'expected one of {_FOREGROUND_MASK_MODES}')
         self.config = config
         self._states: Dict[int, _TrackState] = {}
         self._orb = cv2.ORB_create(nfeatures=config.orb_features)
@@ -271,15 +265,10 @@ class ConfidenceTriggeredRelocalization:
         return selected_bbox, True
 
     def _foreground_mask(self, state: _TrackState, gray: np.ndarray) -> np.ndarray:
-        mode = self.config.foreground_mask_mode
-        if mode == 'mog2':
-            return self._mog2_mask(state, gray)
         residual_mask = self._residual_mask(state, gray)
         if residual_mask is not None:
             self._stats.residual_masks += 1
-        if mode == 'residual':
-            return residual_mask if residual_mask is not None else np.zeros_like(gray, dtype=np.uint8)
-        # mog2_residual_union: M_t = M_t^mog2 U M_t^res
+        # Sec. 2.3: M_t = M_t^mog2 U M_t^res.
         mog2_mask = self._mog2_mask(state, gray)
         if residual_mask is None:
             return mog2_mask
@@ -373,7 +362,7 @@ class ConfidenceTriggeredRelocalization:
             'CTR summary:',
             f'  tracks={stats.tracks} frames={stats.frames} mcc={self.config.mcc_enabled} '
             f'rgtc={self.config.rgtc_enabled} tau={self.config.confidence_threshold:.2f} '
-            f'foreground_mask={self.config.foreground_mask_mode} alpha={self.config.residual_mad_scale:.4f}',
+            f'foreground_mask=mog2_residual_union alpha={self.config.residual_mad_scale:.4f}',
             f'  homography={stats.homography_successes}/{stats.homography_attempts} '
             f'({_safe_ratio(stats.homography_successes, stats.homography_attempts):.2%}) '
             f'mcc_applied={stats.mcc_applied}',

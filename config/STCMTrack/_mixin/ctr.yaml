@@ -14,7 +14,6 @@
     ransac_reproj_threshold: 2.0      # pixels
     max_center_shift_ratio: 1.0
     # RGTC foreground evidence M_t = M_t^mog2 U M_t^res (Eqs. 4-6)
-    foreground_mask_mode: "mog2_residual_union"
     residual_mad_scale: 4.4478        # alpha in Eq. (5)
     mog2_history: 80
     mog2_var_threshold: 24.0
