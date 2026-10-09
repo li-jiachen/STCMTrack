@@ -4,7 +4,7 @@
 
 Official PyTorch implementation of STCMTrack for infrared anti-UAV tracking. Please refer to the paper for method details and experimental results.
 
-See [setup](docs/SETUP.md) and [training and evaluation](docs/ABLATION.md) for installation, data preparation and the Table 2 configurations.
+See [setup](docs/SETUP.md) for installation and data preparation.
 
 ## Model weights
 
@@ -14,8 +14,6 @@ The released weights for **Anti-UAV410** are available in [v1.0.0](https://githu
 |---|---|---|
 | `stcmtrack_base.bin` | Base model weights | [Download](https://github.com/li-jiachen/STCMTrack/releases/download/v1.0.0/stcmtrack_base.bin) |
 | `stcmtrack_ltcp.bin` | LTCP module weights | [Download](https://github.com/li-jiachen/STCMTrack/releases/download/v1.0.0/stcmtrack_ltcp.bin) |
-
-The released base currently fails query numerical validation. See the [weight loading notes](weights/README.md) for the diagnosis and checkpoint requirements.
 
 ## Citation
 

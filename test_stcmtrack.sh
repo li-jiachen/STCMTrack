@@ -17,8 +17,7 @@
 #                        without the marker of this code as trained with the official SPMTrack code.
 #   ltcp ... full        STCMTrack (method STCMTrack) with the components of the row switched on.
 # Rows 2-8 share the STCMTrack base network and non-component settings. Row 1 retains the original
-# SPMTrack structure and inference; it requires separate SPMTrack weights. See docs/ABLATION.md for
-# the structural differences and the limits of reproducing the published scores.
+# SPMTrack structure and inference; it requires separate SPMTrack weights.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

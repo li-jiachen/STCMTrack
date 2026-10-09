@@ -1,6 +1,5 @@
 # Public implementation of the paper's two-stage STCMTrack training.
-# Settings omitted by the paper use the fixed defaults documented in
-# docs/IMPLEMENTATION_DETAILS.md.
+# Settings omitted by the paper use the fixed defaults in this configuration.
 type: "default"
 
 num_epochs: 80

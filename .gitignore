@@ -52,7 +52,6 @@ results.zip
 /weights/*.tar
 /weights/*.manifest.json
 /weights/**/*.manifest.json
-!/weights/README.md
 !/weights/.gitkeep
 *.pth
 *.pt

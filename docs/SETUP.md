@@ -69,4 +69,4 @@ Only the benchmark you run needs to be present. Evaluation reads the test direct
 
 ## Training and evaluation
 
-Continue with [the two-stage training and eight variants](ABLATION.md). New exports use `weights/retrained/` and explicit `BASE_WEIGHT`/`LTCP_WEIGHT` paths, keeping them separate from the original downloads. The [weight notes](../weights/README.md) explain why the original released base currently fails numerical validation. Independent SPMTrack and Anti-UAV require separately trained checkpoints; they are not supplied by the two Anti-UAV410 attachments.
+Use [train_stcmtrack.sh](../train_stcmtrack.sh) for two-stage STCMTrack training, [train_spmtrack.sh](../train_spmtrack.sh) for the independent SPMTrack baseline, and [test_stcmtrack.sh](../test_stcmtrack.sh) for evaluation. The script headers list the commands and supported options. New exports use `weights/retrained/` and explicit `BASE_WEIGHT`/`LTCP_WEIGHT` paths, keeping them separate from the original downloads. Independent SPMTrack and Anti-UAV require separately trained checkpoints; they are not supplied by the two Anti-UAV410 attachments.

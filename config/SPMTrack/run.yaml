@@ -3,8 +3,7 @@
 # Model structure and temporal inference logic: official SPMTrack, github.com/WenRuiCai/SPMTrack,
 #   config/SPMTrack/run.yaml @ c581fe27231f3e16c38578e47daddadfaf6ffd7d  (three templates, two search
 #   frames, "interval" pair sampling, propagated query and online template memory).
-# Data, training budget and evaluation shared with STCMTrack (see docs/SPMTRACK_BASELINE.md; these settings are
-# not taken from upstream):
+# Data, training budget and evaluation shared with STCMTrack (these settings are not taken from upstream):
 #   * datasets: the Anti-UAV410 / Anti-UAV splits of config/_dataset/*.yaml; upstream's GOT-10k / LaSOT /
 #     TrackingNet / COCO paths and sampling weights are not used;
 #   * training: 80 epochs, AdamW lr 1e-4 / weight decay 0.1, cosine schedule, equally weighted BCE/GIoU;
