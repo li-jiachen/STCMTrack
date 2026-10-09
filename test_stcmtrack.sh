@@ -96,14 +96,14 @@ DATASET="${DATASET:-antiuav410}"
 case "$DATASET" in
     antiuav410)
         dataset_mixins=()
-        default_base_weight="$REPO_ROOT/weights/stcmtrack_base.safetensors"
-        default_ltcp_weight="$REPO_ROOT/weights/stcmtrack_ltcp.safetensors"
+        default_base_weight="$REPO_ROOT/weights/stcmtrack_base.bin"
+        default_ltcp_weight="$REPO_ROOT/weights/stcmtrack_ltcp.bin"
         default_gt_dir="$REPO_ROOT/../antiuav410/test"
         ;;
     antiuav300)
         dataset_mixins=(dataset_antiuav300)
-        default_base_weight="$REPO_ROOT/weights/stcmtrack_antiuav300_base.safetensors"
-        default_ltcp_weight="$REPO_ROOT/weights/stcmtrack_antiuav300_ltcp.safetensors"
+        default_base_weight="$REPO_ROOT/weights/stcmtrack_antiuav300_base.bin"
+        default_ltcp_weight="$REPO_ROOT/weights/stcmtrack_antiuav300_ltcp.bin"
         default_gt_dir="$REPO_ROOT/../antiuav300_ir/test"
         ;;
     *) echo "Unsupported DATASET: $DATASET (expected antiuav410 or antiuav300)" >&2; exit 1 ;;

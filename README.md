@@ -13,6 +13,8 @@ The released weights for **Anti-UAV410** are available in [v1.0.0](https://githu
 | `stcmtrack_base.bin` | Base model weights | [Download](https://github.com/li-jiachen/STCMTrack/releases/download/v1.0.0/stcmtrack_base.bin) |
 | `stcmtrack_ltcp.bin` | LTCP module weights | [Download](https://github.com/li-jiachen/STCMTrack/releases/download/v1.0.0/stcmtrack_ltcp.bin) |
 
+See the [weight loading notes](weights/README.md) for compatibility with the released files.
+
 ## Citation
 
 If you use this code in your research, please cite:

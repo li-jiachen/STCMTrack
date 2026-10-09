@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Export a matching base/LTCP weight pair from a full training checkpoint.
 
-Checkpoints are Safetensors, including training snapshots named model.bin.
+Checkpoints and exported .bin files are Safetensors, including training
+snapshots named model.bin. Use stcmtrack_base.bin and stcmtrack_ltcp.bin
+for the default Anti-UAV410 evaluation filenames.
 Exporting a stage-2 snapshot also exports its frozen base so the two files
 cannot accidentally refer to different stages/datasets when used as a pair.
 """
@@ -53,8 +55,10 @@ def export_weights(checkpoint, base_output, ltcp_output=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('checkpoint', type=Path)
-    parser.add_argument('--base-output', type=Path, required=True)
-    parser.add_argument('--ltcp-output', type=Path)
+    parser.add_argument('--base-output', type=Path, required=True,
+                        help='Base Safetensors output, e.g. weights/stcmtrack_base.bin')
+    parser.add_argument('--ltcp-output', type=Path,
+                        help='LTCP Safetensors output, e.g. weights/stcmtrack_ltcp.bin')
     args = parser.parse_args()
     print(json.dumps(export_weights(args.checkpoint, args.base_output, args.ltcp_output), indent=2))
 

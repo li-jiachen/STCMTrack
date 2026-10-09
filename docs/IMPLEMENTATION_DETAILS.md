@@ -112,7 +112,8 @@ Areas, centers, scales and P<sub>n</sub> are always computed after the correspon
 
 ## 6. Checkpoints
 
-- Training snapshots (`model.bin`, Safetensors) contain the full model in both stages, including the frozen backbone, and two buffers with the TMoE scaling (`_expert_alpha` and `_use_rsexpert`).
-- `tools/export_stcmtrack_weights.py` splits a snapshot into a base file (everything except LTCP) and an LTCP file (the gate and the two buffers). Both files record the SHA-256 of the source snapshot in their metadata, and a manifest with the SHA-256 of the outputs is written next to the base file. Existing outputs are never overwritten.
+- Training snapshots written by the current code (`model.bin`, Safetensors) contain the full model in both stages, including the frozen backbone, and two buffers with the TMoE scaling (`_expert_alpha` and `_use_rsexpert`). The `.bin` extension does not change the serialization format.
+- `tools/export_stcmtrack_weights.py` splits a snapshot into a base file (everything except LTCP) and an LTCP file (the gate and the two buffers). The default evaluation filenames are `stcmtrack_base.bin` and `stcmtrack_ltcp.bin` for Anti-UAV410, and `stcmtrack_antiuav300_base.bin` and `stcmtrack_antiuav300_ltcp.bin` for Anti-UAV. Both files record the SHA-256 of the source snapshot in their metadata, and a manifest with the SHA-256 of the outputs is written next to the base file. Existing outputs are never overwritten.
 - `tools/check_stcmtrack_weights.py` (called by `test_stcmtrack.sh`) checks that the base file holds the tracking network without LTCP, that the LTCP file contains exactly the gate, and that both come from the same snapshot.
 - The model loads the base file first and the LTCP file second. It refuses incomplete files, files without the TMoE scaling, an LTCP file without a previously loaded base, and a TMoE scaling that differs from the configuration.
+- The two v1.0.0 release files use an older layout and do not meet these loading requirements. See [weights/README.md](../weights/README.md) for the compatibility note and export commands.

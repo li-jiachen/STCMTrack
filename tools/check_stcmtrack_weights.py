@@ -4,7 +4,8 @@
 The base file must hold the tracking network without LTCP, the LTCP file exactly the gate
 parameters, and both must have been exported from the same training snapshot
 (tools/export_stcmtrack_weights.py records the SHA-256 of that snapshot in both files).
-Only the safetensors index and the TMoE scaling are read; no model is built.
+The .bin files use Safetensors format. Only the index and the TMoE scaling are
+read; no model is built. Other filename extensions are also accepted.
 """
 import argparse
 import json
@@ -44,8 +45,8 @@ def validate_weight_pair(base_path, ltcp_path=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--base', required=True, type=Path)
-    parser.add_argument('--ltcp', type=Path)
+    parser.add_argument('--base', required=True, type=Path, help='Base model .bin file (Safetensors format)')
+    parser.add_argument('--ltcp', type=Path, help='LTCP .bin file (Safetensors format)')
     args = parser.parse_args()
     try:
         result = validate_weight_pair(args.base, args.ltcp)
