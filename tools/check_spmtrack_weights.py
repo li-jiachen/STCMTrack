@@ -52,7 +52,7 @@ def validate_spmtrack_weights(path, *, allow_unmarked=False, expected_alpha=64.0
             provenance = 'no marker; accepted as official SPMTrack weights (--allow-unmarked)'
         else:
             raise ValueError(f'{path}: no {PORT_VERSION_KEY} marker. Pass --allow-unmarked '
-                             f'(test_stcmtrack.sh: ALLOW_UNMARKED_SPMTRACK_WEIGHTS=1) for a file that was trained '
+                             f'(test_spmtrack.sh: ALLOW_UNMARKED_SPMTRACK_WEIGHTS=1) for a file that was trained '
                              f'with the official SPMTrack code.')
     return {'status': 'passed', 'weights': str(path), 'tensors': len(keys), 'provenance': provenance,
             'expert_alpha': alpha, 'use_rsexpert': rsexpert}

@@ -10,7 +10,7 @@ The table is derived statically, without importing torch, from
 
   python tools/check_variant_mapping.py            # markdown table
   python tools/check_variant_mapping.py --json
-  python tools/check_variant_mapping.py --check    # also check the paper's two-stage STCMTrack training entry point
+  python tools/check_variant_mapping.py --check    # require eight controlled STCMTrack rows and two-stage training
 """
 import argparse
 import ast
@@ -37,7 +37,7 @@ COMPONENTS = {
     'rgtc': (False, False, True), 'ltcp_mcc': (True, True, False), 'ltcp_rgtc': (True, False, True),
     'mcc_rgtc': (False, True, True), 'full': (True, True, True),
 }
-STCM_VARIANTS = tuple(name for name in COMPONENTS if name != 'baseline')
+STCM_VARIANTS = tuple(COMPONENTS)
 
 
 
@@ -479,13 +479,18 @@ def compute(dataset='antiuav410'):
     text = SCRIPT.read_text(encoding='utf-8')
     variants, dataset_mixins = parse_variants(text)
     rows = {}
+    model_paths, pipeline_paths = {}, {}
     for name, info in variants.items():
         base_mixins = ['disable_torch_compile'] + dataset_mixins[dataset] + info['variant_mixins']
         config = build_config(info['method'], base_mixins)
         eval_config = build_config(info['method'], base_mixins + ['evaluation'])
         facts = config_facts(config)
-        model = resolve_model(facts['config_type'])
-        pipeline = resolve_pipeline(facts['pipeline_type'])
+        if facts['config_type'] not in model_paths:
+            model_paths[facts['config_type']] = resolve_model(facts['config_type'])
+        if facts['pipeline_type'] not in pipeline_paths:
+            pipeline_paths[facts['pipeline_type']] = resolve_pipeline(facts['pipeline_type'])
+        model = copy.deepcopy(model_paths[facts['config_type']])
+        pipeline = copy.deepcopy(pipeline_paths[facts['pipeline_type']])
         rows[name] = {**info, **facts, **settings_facts(config),
                       'eval_shared_settings_sha256': settings_facts(eval_config)['shared_settings_sha256'],
                       'eval_public_settings_sha256': fingerprint(evaluation_settings(eval_config)),
@@ -497,6 +502,7 @@ def problems(rows):
     found = []
     if set(rows) != set(COMPONENTS):
         found.append(f'Expected exactly the eight Table 2 variants, got {sorted(rows)}')
+    found.extend(ablation_conflicts(rows))
     for name, row in rows.items():
         found.extend(f'{name}: {problem}' for problem in row['augmentation_target_problems'])
         if row['method'] != row['config_type']:
@@ -509,46 +515,34 @@ def problems(rows):
         if name in COMPONENTS and (row['ltcp'], row['mcc'], row['rgtc']) != COMPONENTS[name]:
             found.append(f'{name}: components {(row["ltcp"], row["mcc"], row["rgtc"])} instead of '
                          f'{COMPONENTS[name]}')
-        if row['method'] == 'SPMTrack':
-            if (row['ltcp'], row['mcc'], row['rgtc']) != (False, False, False):
-                found.append(f'{name}: the SPMTrack baseline must have LTCP/MCC/RGTC off')
-            reach = {**row['model']['reach'], **{'pipeline_' + k: v for k, v in row['pipeline']['reach'].items()}}
-            for key in ('ltcp_code', 'ctr_code', 'stcmtrack_package', 'pipeline_ltcp_code', 'pipeline_ctr_code'):
-                if reach[key]:
-                    found.append(f'{name}: SPMTrack code path can reach {key}')
-            if row['model']['classes'] != ['SPMTrackInference_DINOv2', 'SPMTrack_DINOv2']:
-                found.append(f'{name}: SPMTrack builder returns {row["model"]["classes"]}')
-            if row['model']['bases'].get('SPMTrackInference_DINOv2') != ['SPMTrack_DINOv2']:
-                found.append(f'{name}: SPMTrackInference_DINOv2 must derive from SPMTrack_DINOv2 only')
-            if row['pipeline']['main_class'] != 'SPMTrackOneStream_Evaluation_MainPipeline':
-                found.append(f'{name}: SPMTrack evaluation pipeline is {row["pipeline"]["main_class"]}')
-            if (row['train_templates'], row['train_search_frames']) != (3, 2):
-                found.append(f'{name}: SPMTrack training must use 3 templates and 2 search frames')
-        else:
-            if row['train_templates'] != 1:
-                found.append(f'{name}: STCMTrack variants use one template, got {row["train_templates"]}')
-            if row['pipeline_type'] != 'one_stream_tracker':
-                found.append(f'{name}: unexpected pipeline {row["pipeline_type"]}')
-            if row['post_process'] != 'box_with_score_map' or row['window_penalty'] != 0.:
-                found.append(f'{name}: STCMTrack post-processing must be the no-Hann definition')
-    spm_names = {n for n, r in rows.items() if r['method'] == 'SPMTrack'}
-    if spm_names != {'baseline'}:
-        found.append(f'Table 2 row 1 must be the independent SPMTrack baseline, got {sorted(spm_names)}')
+        if row['method'] != 'STCMTrack' or row['config_type'] != 'STCMTrack':
+            found.append(f'{name}: all eight Table 2 variants must select STCMTrack; '
+                         'independent SPMTrack belongs in the separate comparison')
+        if row['model']['classes'] != ['STCMTrackInference_DINOv2', 'STCMTrack_DINOv2']:
+            found.append(f'{name}: expected the STCMTrack model classes, got {row["model"]["classes"]}')
+        if row['model']['bases'].get('STCMTrackInference_DINOv2') != ['STCMTrack_DINOv2']:
+            found.append(f'{name}: STCMTrackInference_DINOv2 must derive from STCMTrack_DINOv2 only')
+        if row['pipeline']['main_class'] != 'OneStreamTracker_Evaluation_MainPipeline':
+            found.append(f'{name}: unexpected STCMTrack evaluation pipeline {row["pipeline"]["main_class"]}')
+        if (row['train_templates'], row['train_search_frames'], row['train_sample_mode']) != (1, 3, 'first_frame_causal'):
+            found.append(f'{name}: all STCMTrack variants must use one template, three search frames '
+                         'and first_frame_causal sampling')
+        if row['pipeline_type'] != 'one_stream_tracker':
+            found.append(f'{name}: unexpected pipeline {row["pipeline_type"]}')
+        if row['post_process'] != 'box_with_score_map' or row['window_penalty'] != 0.:
+            found.append(f'{name}: STCMTrack post-processing must be the no-Hann definition')
     controlled = [rows[name] for name in STCM_VARIANTS if name in rows]
     if len(controlled) != len(STCM_VARIANTS):
-        found.append('All seven STCMTrack configurations (Table 2 rows 2-8) must exist')
+        found.append('All eight controlled STCMTrack configurations must exist')
     if controlled:
-        reference = controlled[0]
+        reference = rows.get('ltcp', controlled[0])
         for name in STCM_VARIANTS:
             if name not in rows:
                 continue
             row = rows[name]
             if row['method'] != 'STCMTrack' or row['model'] != reference['model'] \
                     or row['pipeline'] != reference['pipeline']:
-                found.append(f'{name}: Table 2 rows 2-8 must use the same STCMTrack model and pipeline')
-            for key in ('shared_settings_sha256', 'eval_shared_settings_sha256'):
-                if row[key] != reference[key]:
-                    found.append(f'{name}: non-component settings differ from ltcp ({key})')
+                found.append(f'{name}: all eight Table 2 rows must use the same STCMTrack model and pipeline')
             needs_full_frame = row['mcc'] or row['rgtc']
             if any(value != needs_full_frame for value in row['full_template_inputs'].values()):
                 found.append(f'{name}: full-template-image inputs must be enabled exactly when MCC or RGTC is used')
@@ -576,14 +570,16 @@ def problems(rows):
 
 
 def ablation_conflicts(rows):
-    
-    if 'baseline' not in rows or 'ltcp' not in rows:
+    controlled = [name for name in STCM_VARIANTS if name in rows]
+    if len(controlled) < 2:
         return []
-    baseline, stcm = rows['baseline'], rows['ltcp']
+    reference_name = 'ltcp' if 'ltcp' in rows else controlled[0]
+    reference = rows[reference_name]
     fields = ('train_templates', 'train_search_frames', 'train_sample_mode', 'pipeline_type',
-              'post_process', 'window_penalty')
-    return [f'Row 1 SPMTrack {field}={baseline[field]!r}; rows 2-8 STCMTrack {field}={stcm[field]!r}'
-            for field in fields if baseline[field] != stcm[field]]
+              'post_process', 'window_penalty', 'shared_settings_sha256', 'eval_shared_settings_sha256')
+    return [f'{name}: non-component settings differ from {reference_name} '
+            f'({field}: {rows[name][field]!r} != {reference[field]!r})'
+            for name in controlled for field in fields if rows[name][field] != reference[field]]
 
 
 def markdown(rows):
@@ -603,8 +599,6 @@ def markdown(rows):
                    f"{mark(row['rgtc'])} | {row['train_templates']} / {row['train_search_frames']} "
                    f"({row['train_sample_mode']}) | `{row['post_process']}` (Hann {row['window_penalty']}) | "
                    f"`{row['pipeline']['main_class']}` | {reachable} |")
-    out.append('\nAll eight rows share the external training and evaluation settings. '
-               'Row 1 is independent SPMTrack; only rows 2-8 share the complete non-component configuration.')
     out.extend(f'- {conflict}' for conflict in ablation_conflicts(rows))
     return '\n'.join(out)
 
