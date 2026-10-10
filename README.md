@@ -4,7 +4,7 @@
 
 Official PyTorch implementation of STCMTrack for infrared anti-UAV tracking. Please refer to the paper for method details and experimental results.
 
-See [setup](docs/SETUP.md) for installation and data preparation, [running](docs/RUNNING.md) for script usage, and [implementation notes](docs/IMPLEMENTATION_NOTES.md) for checkpoint and reproduction status.
+See [setup](docs/SETUP.md) for installation and data preparation.
 
 ## Model weights
 

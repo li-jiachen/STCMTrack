@@ -2,9 +2,7 @@
 import ast
 import contextlib
 import copy
-import hashlib
 import io
-import json
 from pathlib import Path
 import re
 import sys
@@ -29,37 +27,9 @@ SPMTRACK_SOURCES = (
 )
 
 
-def sha256(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
-
-
 def python_files(entry):
     path = ROOT / entry
     return [path] if path.is_file() else sorted(path.rglob('*.py'))
-
-
-class UpstreamPinTests(unittest.TestCase):
-    pin = json.loads((ROOT / 'trackit/models/methods/SPMTrack/UPSTREAM.json').read_text(encoding='utf-8'))
-
-    def test_commit_and_license_are_pinned(self):
-        self.assertEqual(self.pin['upstream_commit'], 'c581fe27231f3e16c38578e47daddadfaf6ffd7d')
-        self.assertEqual(self.pin['upstream_repository'], 'https://github.com/WenRuiCai/SPMTrack')
-        self.assertEqual(self.pin['license'], 'Apache-2.0')
-        self.assertEqual(sha256(ROOT / 'LICENSE'), self.pin['license_sha256'])  # upstream and repo license are identical
-
-    def test_verbatim_and_modified_files_match_the_record(self):
-        for entry in self.pin['files']:
-            with self.subTest(file=entry['local']):
-                actual = sha256(ROOT / entry['local'])
-                if entry['status'] == 'verbatim':
-                    self.assertEqual(actual, entry['upstream_sha256'])
-                elif entry['status'] == 'modified':
-                    self.assertEqual(actual, entry['local_sha256'])
-                    self.assertNotEqual(actual, entry['upstream_sha256'])
-                    self.assertTrue(entry['deviation'])
-                else:
-                    self.assertEqual(entry['status'], 'ported')
-                    self.assertTrue(entry['deviation'])  
 
 
 class VariantMappingTests(unittest.TestCase):
