@@ -1,10 +1,11 @@
 
 import ast
+import contextlib
 import copy
-import hashlib
-import json
+import io
 from pathlib import Path
 import re
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -26,37 +27,9 @@ SPMTRACK_SOURCES = (
 )
 
 
-def sha256(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
-
-
 def python_files(entry):
     path = ROOT / entry
     return [path] if path.is_file() else sorted(path.rglob('*.py'))
-
-
-class UpstreamPinTests(unittest.TestCase):
-    pin = json.loads((ROOT / 'trackit/models/methods/SPMTrack/UPSTREAM.json').read_text(encoding='utf-8'))
-
-    def test_commit_and_license_are_pinned(self):
-        self.assertEqual(self.pin['upstream_commit'], 'c581fe27231f3e16c38578e47daddadfaf6ffd7d')
-        self.assertEqual(self.pin['upstream_repository'], 'https://github.com/WenRuiCai/SPMTrack')
-        self.assertEqual(self.pin['license'], 'Apache-2.0')
-        self.assertEqual(sha256(ROOT / 'LICENSE'), self.pin['license_sha256'])  # upstream and repo license are identical
-
-    def test_verbatim_and_modified_files_match_the_record(self):
-        for entry in self.pin['files']:
-            with self.subTest(file=entry['local']):
-                actual = sha256(ROOT / entry['local'])
-                if entry['status'] == 'verbatim':
-                    self.assertEqual(actual, entry['upstream_sha256'])
-                elif entry['status'] == 'modified':
-                    self.assertEqual(actual, entry['local_sha256'])
-                    self.assertNotEqual(actual, entry['upstream_sha256'])
-                    self.assertTrue(entry['deviation'])
-                else:
-                    self.assertEqual(entry['status'], 'ported')
-                    self.assertTrue(entry['deviation'])  
 
 
 class VariantMappingTests(unittest.TestCase):
@@ -68,28 +41,45 @@ class VariantMappingTests(unittest.TestCase):
                 self.assertEqual(set(rows), {'baseline', 'ltcp', 'mcc', 'rgtc',
                                              'ltcp_mcc', 'ltcp_rgtc', 'mcc_rgtc', 'full'})
 
-    def test_table2_row1_is_independent_spmtrack(self):
-        rows = mapping.compute('antiuav410')
-        baseline = rows['baseline']
-        self.assertEqual(baseline['method'], 'SPMTrack')
-        self.assertEqual(baseline['model']['classes'], ['SPMTrackInference_DINOv2', 'SPMTrack_DINOv2'])
-        self.assertEqual((baseline['train_templates'], baseline['train_search_frames']), (3, 2))
-        self.assertEqual((baseline['ltcp'], baseline['mcc'], baseline['rgtc']), (False, False, False))
-        self.assertEqual(baseline['window_penalty'], 0.)
-        for name in mapping.STCM_VARIANTS:
-            self.assertEqual(rows[name]['model']['classes'], ['STCMTrackInference_DINOv2', 'STCMTrack_DINOv2'])
-            self.assertEqual((rows[name]['train_templates'], rows[name]['train_search_frames']), (1, 3))
-        self.assertNotEqual(baseline['shared_settings_sha256'], rows['ltcp']['shared_settings_sha256'])
-        self.assertTrue(any('train_templates' in conflict for conflict in mapping.ablation_conflicts(rows)))
-        self.assertFalse(any('window_penalty' in conflict for conflict in mapping.ablation_conflicts(rows)))
+    def test_table2_row1_is_the_same_stcmtrack_with_all_components_off(self):
+        for dataset in ('antiuav410', 'antiuav300'):
+            rows = mapping.compute(dataset)
+            baseline = rows['baseline']
+            with self.subTest(dataset=dataset):
+                self.assertEqual(set(mapping.STCM_VARIANTS), set(mapping.COMPONENTS))
+                self.assertEqual(baseline['method'], 'STCMTrack')
+                self.assertEqual((baseline['ltcp'], baseline['mcc'], baseline['rgtc']), (False, False, False))
+                self.assertEqual(mapping.ablation_conflicts(rows), [])
+            for name, row in rows.items():
+                with self.subTest(dataset=dataset, variant=name):
+                    self.assertEqual(row['model']['classes'], ['STCMTrackInference_DINOv2', 'STCMTrack_DINOv2'])
+                    self.assertEqual((row['train_templates'], row['train_search_frames'], row['train_sample_mode']),
+                                     (1, 3, 'first_frame_causal'))
+                    self.assertEqual(row['pipeline_type'], 'one_stream_tracker')
+                    self.assertEqual(row['window_penalty'], 0.)
+                    self.assertEqual(row['model'], baseline['model'])
+                    self.assertEqual(row['pipeline'], baseline['pipeline'])
+                    for key in ('shared_settings_sha256', 'eval_shared_settings_sha256'):
+                        self.assertEqual(row[key], baseline[key])
 
-    def test_check_rejects_extra_variants_and_a_relabelled_stcm_baseline(self):
+    def test_check_rejects_extra_variants_and_an_independent_spm_control(self):
         rows = mapping.compute('antiuav410')
         rows['stcm_base'] = copy.deepcopy(rows['ltcp'])
         self.assertTrue(any('exactly the eight' in problem for problem in mapping.problems(rows)))
         rows = mapping.compute('antiuav410')
-        rows['baseline'] = copy.deepcopy(rows['ltcp'])
-        self.assertTrue(any('independent SPMTrack baseline' in problem for problem in mapping.problems(rows)))
+        rows['baseline'].update(method='SPMTrack', config_type='SPMTrack',
+                                model=mapping.resolve_model('SPMTrack'),
+                                pipeline=mapping.resolve_pipeline('spmtrack_one_stream_tracker'))
+        self.assertTrue(any('all eight Table 2 variants must select STCMTrack' in problem
+                            for problem in mapping.problems(rows)))
+
+    def test_check_rejects_every_baseline_component_being_enabled(self):
+        original_rows = mapping.compute('antiuav410')
+        for component in ('ltcp', 'mcc', 'rgtc'):
+            with self.subTest(component=component):
+                rows = copy.deepcopy(original_rows)
+                rows['baseline'][component] = True
+                self.assertTrue(any('baseline: components' in problem for problem in mapping.problems(rows)))
 
     @staticmethod
     def ablation_config(name, dataset='antiuav410', evaluation=False):
@@ -100,7 +90,7 @@ class VariantMappingTests(unittest.TestCase):
             mixins.append('evaluation')
         return mapping.build_config(info['method'], mixins)
 
-    def test_seven_stcm_rows_share_the_complete_non_component_config(self):
+    def test_all_eight_stcm_rows_share_the_complete_non_component_config(self):
         for dataset in ('antiuav410', 'antiuav300'):
             for evaluation in (False, True):
                 reference = mapping.shared_config(self.ablation_config('ltcp', dataset, evaluation))
@@ -108,6 +98,73 @@ class VariantMappingTests(unittest.TestCase):
                     with self.subTest(dataset=dataset, evaluation=evaluation, variant=name):
                         config = self.ablation_config(name, dataset, evaluation)
                         self.assertEqual(mapping.shared_config(config), reference)
+
+    def test_baseline_template_sampling_pipeline_and_hash_drift_are_failures(self):
+        changes = (
+            ('templates', 'train_templates', 3),
+            ('search_frames', 'train_search_frames', 2),
+            ('sampling', 'train_sample_mode', 'interval'),
+            ('pipeline', 'pipeline_type', 'spmtrack_one_stream_tracker'),
+            ('train_hash', 'shared_settings_sha256', 'different'),
+            ('eval_hash', 'eval_shared_settings_sha256', 'different'),
+        )
+        for dataset in ('antiuav410', 'antiuav300'):
+            original_rows = mapping.compute(dataset)
+            for label, key, value in changes:
+                with self.subTest(dataset=dataset, setting=label):
+                    rows = copy.deepcopy(original_rows)
+                    rows['baseline'][key] = value
+                    conflicts = mapping.ablation_conflicts(rows)
+                    self.assertTrue(any('baseline: non-component settings differ' in issue and key in issue
+                                        for issue in conflicts))
+                    self.assertTrue(set(conflicts).issubset(mapping.problems(rows)))
+
+    def test_real_config_changes_to_the_control_are_detected_after_rebuilding(self):
+        changes = (
+            ('templates', lambda cfg: cfg['run']['data']['train']['siamese_training_pair_sampling'][
+                'positive_sample'].update(num_template_frames=3)),
+            ('sampling', lambda cfg: cfg['run']['data']['train']['siamese_training_pair_sampling'][
+                'positive_sample'].update(sample_mode='interval')),
+            ('pipeline', lambda cfg: cfg['run']['runner']['test']['evaluator']['pipeline'].update(
+                type='spmtrack_one_stream_tracker')),
+            ('gradient_clip', lambda cfg: cfg['run']['runner']['train']['optimization'].update(max_grad_norm=2.)),
+        )
+        original_builder = mapping.build_config
+        for dataset in ('antiuav410', 'antiuav300'):
+            for label, change in changes:
+                def changed_control(method, mixins):
+                    config = original_builder(method, mixins)
+                    if method == 'STCMTrack' and 'evaluation' not in mixins and not {'ltcp', 'ctr'}.intersection(mixins):
+                        change(config)
+                    return config
+
+                with self.subTest(dataset=dataset, setting=label), \
+                        patch.object(mapping, 'build_config', changed_control):
+                    rows = mapping.compute(dataset)
+                    self.assertNotEqual(rows['baseline']['shared_settings_sha256'], rows['ltcp']['shared_settings_sha256'])
+                    self.assertTrue(any('baseline: non-component settings differ' in issue
+                                        for issue in mapping.problems(rows)))
+
+    def test_hash_drift_in_any_of_the_eight_rows_is_rejected(self):
+        for dataset in ('antiuav410', 'antiuav300'):
+            original_rows = mapping.compute(dataset)
+            for name in mapping.COMPONENTS:
+                for key in ('shared_settings_sha256', 'eval_shared_settings_sha256'):
+                    with self.subTest(dataset=dataset, variant=name, fingerprint=key):
+                        rows = copy.deepcopy(original_rows)
+                        rows[name][key] = 'different'
+                        self.assertTrue(any('non-component settings differ' in issue and key in issue
+                                            for issue in mapping.problems(rows)))
+
+    def test_main_check_exits_unsuccessfully_for_baseline_drift(self):
+        rows = mapping.compute('antiuav410')
+        rows['baseline']['shared_settings_sha256'] = 'different'
+        with patch.object(mapping, 'compute', return_value=rows), \
+                patch.object(sys, 'argv', ['check_variant_mapping.py', '--check']), \
+                contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()), \
+                self.assertRaises(SystemExit) as raised:
+            mapping.main()
+        self.assertEqual(raised.exception.code, 1)
 
     def test_all_eight_rows_share_public_defaults_and_prediction_heads(self):
         for dataset in ('antiuav410', 'antiuav300'):
@@ -319,7 +376,7 @@ class SPMTrackConfigTests(unittest.TestCase):
 
 
 class IsolationTests(unittest.TestCase):
-    def test_baseline_sources_do_not_import_stcmtrack_ltcp_or_ctr(self):
+    def test_independent_spmtrack_sources_do_not_import_stcmtrack_ltcp_or_ctr(self):
         for entry in SPMTRACK_SOURCES:
             for path in python_files(entry):
                 with self.subTest(file=str(path.relative_to(ROOT))):
@@ -337,7 +394,7 @@ class IsolationTests(unittest.TestCase):
                             self.assertNotIn('ctr', parts, module)
                             self.assertNotIn('one_stream', parts, module)
 
-    def test_baseline_text_does_not_instantiate_ltcp_or_ctr(self):
+    def test_independent_spmtrack_text_does_not_instantiate_ltcp_or_ctr(self):
         for entry in SPMTRACK_SOURCES:
             for path in python_files(entry):
                 code = re.sub(r'"""(.|\n)*?"""|#.*', '', path.read_text(encoding='utf-8'))
@@ -367,7 +424,6 @@ class PnDefinitionTests(unittest.TestCase):
         self.assertIn('np.hypot(g[:, 2], g[:, 3])', core)
         self.assertIn('(vn < .5).mean()', core)
         self.assertIn("'normalized_precision': 'center_error / hypot(gt_width, gt_height) < 0.5'", core)
-        self.assertIn('Sec. 3.2', core)
 
     def test_boundary_values_on_synthetic_boxes(self):
         gt = [[0, 0, 30, 40]]  

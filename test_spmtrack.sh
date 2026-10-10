@@ -56,36 +56,20 @@ case "$EVAL_SCOPE" in
     *) echo "Unsupported EVAL_SCOPE: $EVAL_SCOPE (expected full or short)" >&2; exit 1 ;;
 esac
 
-VARIANT="${VARIANT:-full}"
-method_name=STCMTrack
-case "$VARIANT" in
-    baseline) variant_mixins=();                              use_ltcp=false ;;
-    ltcp)      variant_mixins=(ltcp);                         use_ltcp=true ;;
-    mcc)       variant_mixins=(ctr ctr_no_rgtc);              use_ltcp=false ;;
-    rgtc)      variant_mixins=(ctr ctr_no_mcc);               use_ltcp=false ;;
-    ltcp_mcc)  variant_mixins=(ltcp ctr ctr_no_rgtc);         use_ltcp=true ;;
-    ltcp_rgtc) variant_mixins=(ltcp ctr ctr_no_mcc);          use_ltcp=true ;;
-    mcc_rgtc)  variant_mixins=(ctr);                          use_ltcp=false ;;
-    full)      variant_mixins=(ltcp ctr);                     use_ltcp=true ;;
-    *)
-        echo "Unsupported VARIANT: $VARIANT" >&2
-        echo "Expected one of: baseline ltcp mcc rgtc ltcp_mcc ltcp_rgtc mcc_rgtc full" >&2
-        exit 1
-        ;;
-esac
+VARIANT=spmtrack
+method_name=SPMTrack
+variant_mixins=()
 
 DATASET="${DATASET:-antiuav410}"
 case "$DATASET" in
     antiuav410)
         dataset_mixins=()
-        default_base_weight="$REPO_ROOT/weights/stcmtrack_base.bin"
-        default_ltcp_weight="$REPO_ROOT/weights/stcmtrack_ltcp.bin"
+        default_base_weight="$REPO_ROOT/weights/spmtrack_baseline.safetensors"
         default_gt_dir="$REPO_ROOT/../antiuav410/test"
         ;;
     antiuav300)
         dataset_mixins=(dataset_antiuav300)
-        default_base_weight="$REPO_ROOT/weights/stcmtrack_antiuav300_base.bin"
-        default_ltcp_weight="$REPO_ROOT/weights/stcmtrack_antiuav300_ltcp.bin"
+        default_base_weight="$REPO_ROOT/weights/spmtrack_antiuav300_baseline.safetensors"
         default_gt_dir="$REPO_ROOT/../antiuav300_ir/test"
         ;;
     *) echo "Unsupported DATASET: $DATASET (expected antiuav410 or antiuav300)" >&2; exit 1 ;;
@@ -93,7 +77,6 @@ esac
 printf 'Evaluation scope: %s | variant: %s | model: %s | dataset: %s\n' "$EVAL_SCOPE" "$VARIANT" "$method_name" "$DATASET"
 
 BASE_WEIGHT="${BASE_WEIGHT:-$default_base_weight}"
-LTCP_WEIGHT="${LTCP_WEIGHT:-$default_ltcp_weight}"
 if [[ -z "${ANTIUAV_GT_DIR:-}" ]]; then
     ANTIUAV_GT_DIR="$(python3 - "$DATASET" <<'PYCODE'
 import sys
@@ -105,16 +88,12 @@ PYCODE
 )"
 fi
 export ANTIUAV_GT_DIR
-OUTPUT_ROOT="${OUTPUT_DIR:-$REPO_ROOT/output/stcmtrack_test_${DATASET}_${VARIANT}_${EVAL_SCOPE}}"
+OUTPUT_ROOT="${OUTPUT_DIR:-$REPO_ROOT/output/spmtrack_test_${DATASET}_${EVAL_SCOPE}}"
 DEVICE_IDS="${DEVICE_IDS:-0}"
-REPORT_TAG="${REPORT_TAG:-stcmtrack_${DATASET}_${VARIANT}_${EVAL_SCOPE}}"
+REPORT_TAG="${REPORT_TAG:-spmtrack_${DATASET}_${EVAL_SCOPE}}"
 
 if [[ ! -f "$BASE_WEIGHT" ]]; then
     echo "BASE_WEIGHT not found: $BASE_WEIGHT (override with BASE_WEIGHT=...)" >&2
-    exit 1
-fi
-if [[ "$use_ltcp" == true && ! -f "$LTCP_WEIGHT" ]]; then
-    echo "LTCP_WEIGHT not found: $LTCP_WEIGHT (override with LTCP_WEIGHT=...)" >&2
     exit 1
 fi
 if [[ ! -d "$ANTIUAV_GT_DIR" ]]; then
@@ -122,11 +101,11 @@ if [[ ! -d "$ANTIUAV_GT_DIR" ]]; then
     exit 1
 fi
 
-weight_check_args=(--base "$BASE_WEIGHT")
-if [[ "$use_ltcp" == true ]]; then
-    weight_check_args+=(--ltcp "$LTCP_WEIGHT")
+spmtrack_check_args=(--weights "$BASE_WEIGHT")
+if [[ "${ALLOW_UNMARKED_SPMTRACK_WEIGHTS:-0}" == 1 ]]; then
+    spmtrack_check_args+=(--allow-unmarked)
 fi
-python3 "$REPO_ROOT/tools/check_stcmtrack_weights.py" "${weight_check_args[@]}"
+python3 "$REPO_ROOT/tools/check_spmtrack_weights.py" "${spmtrack_check_args[@]}"
 
 RUN_ID="$(date +%Y%m%d_%H%M%S)_$$"
 RUN_OUTPUT_DIR="$OUTPUT_ROOT/$RUN_ID"
@@ -203,6 +182,9 @@ print(f"Current GPU: {device_id} ({torch.cuda.get_device_name(device_id)})")
 PY
 
 mixin_names=(disable_torch_compile ${dataset_mixins[@]+"${dataset_mixins[@]}"} ${variant_mixins[@]+"${variant_mixins[@]}"} evaluation)
+if [[ "${ALLOW_UNMARKED_SPMTRACK_WEIGHTS:-0}" == 1 ]]; then
+    mixin_names+=(spmtrack_allow_unmarked_weights)
+fi
 if [[ "$EVAL_SCOPE" == short ]]; then
     mixin_names+=(eval_short)
 fi
@@ -213,9 +195,6 @@ for mixin_name in "${mixin_names[@]}"; do
     boot_args+=(--mixin "$mixin_name")
 done
 boot_args+=(--weight_path "$BASE_WEIGHT")
-if [[ "$use_ltcp" == true ]]; then
-    boot_args+=(--weight_path "$LTCP_WEIGHT")
-fi
 
 "$REPO_ROOT/boot.sh" "$method_name" dinov2 \
     "${boot_args[@]}" \
