@@ -41,7 +41,7 @@ class Block(nn.Module):
         moe_cfg = None
     ) -> None:
         super().__init__()
-        # print(f"biases: qkv: {qkv_bias}, proj: {proj_bias}, ffn: {ffn_bias}")
+        
         self.norm1 = norm_layer(dim)
         self.attn = attn_class(
             dim,
@@ -80,7 +80,7 @@ class Block(nn.Module):
             return self.ls2(self.mlp(self.norm2(x)))
 
         if self.training and self.sample_drop_ratio > 0.1:
-            # the overhead is compensated only for a drop path rate larger than 0.1
+            
             x = drop_add_residual_stochastic_depth(
                 x,
                 residual_func=attn_residual_func,
@@ -105,13 +105,13 @@ def drop_add_residual_stochastic_depth(
     residual_func: Callable[[Tensor], Tensor],
     sample_drop_ratio: float = 0.0,
 ) -> Tensor:
-    # 1) extract subset using permutation
+    
     b, n, d = x.shape
     sample_subset_size = max(int(b * (1 - sample_drop_ratio)), 1)
     brange = (torch.randperm(b, device=x.device))[:sample_subset_size]
     x_subset = x[brange]
 
-    # 2) apply residual_func to get residual
+    
     residual = residual_func(x_subset)
 
     x_flat = x.flatten(1)
@@ -119,6 +119,6 @@ def drop_add_residual_stochastic_depth(
 
     residual_scale_factor = b / sample_subset_size
 
-    # 3) add the residual
+    
     x_plus_residual = torch.index_add(x_flat, 0, brange, residual.to(dtype=x.dtype), alpha=residual_scale_factor)
     return x_plus_residual.view_as(x)

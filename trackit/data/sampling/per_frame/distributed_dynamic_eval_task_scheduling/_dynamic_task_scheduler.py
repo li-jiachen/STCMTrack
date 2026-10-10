@@ -4,21 +4,18 @@ from typing import Optional, Tuple
 
 class DynamicTaskScheduler:
     def __init__(self, tasks: np.ndarray, world_size: int):
-        '''
-        :param tasks: shape: (num_tasks,), containing the number of steps of each task
-        :param world_size: number of ranks
-        '''
+        
         assert np.all(tasks > 0)
         self._tasks = tasks
         self._world_size = world_size
-        # self.reset()
+        
 
     def reset(self):
         self._exhausted_index = 0
         self._running_tasks = [{} for _ in range(self._world_size)]
 
     def get_next_batch(self, rank_id: int, rank_iteration: int, batch_size: int) -> Optional[Tuple[Tuple[int, int], ...]]:
-        # torch dataloader is order preserved
+        
         assert rank_id < self._world_size
 
         rank_running_tasks = self._running_tasks[rank_id]
@@ -31,7 +28,7 @@ class DynamicTaskScheduler:
 
             batch.append((task_index, step_index))
 
-            # look forward
+            
             step_index += 1
             if step_index == self._tasks[task_index]:
                 del rank_running_tasks[task_index]

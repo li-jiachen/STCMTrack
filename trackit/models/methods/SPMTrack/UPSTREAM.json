@@ -15,20 +15,26 @@
     {
       "local": "trackit/models/methods/SPMTrack/modules/patch_embed.py",
       "upstream": "trackit/models/methods/SPMTrack/modules/patch_embed.py",
-      "status": "verbatim",
-      "upstream_sha256": "4e34361c60884cf3f17c811bd458792ce88355435967c339c4550ba80a160f15"
+      "status": "modified",
+      "upstream_sha256": "4e34361c60884cf3f17c811bd458792ce88355435967c339c4550ba80a160f15",
+      "local_sha256": "6c8296f81c061078e1ee728e7da135b37afc91a193929481ee64166654c7d6b6",
+      "deviation": "Ordinary comments and documentation were removed without changing executable logic; license and attribution notices were retained."
     },
     {
       "local": "trackit/models/methods/SPMTrack/modules/head/mlp.py",
       "upstream": "trackit/models/methods/SPMTrack/modules/head/mlp.py",
-      "status": "verbatim",
-      "upstream_sha256": "9fb72b777fb183eb8e8251bb6660b391bfe95a3a171fd51bde71be2ece9680e9"
+      "status": "modified",
+      "upstream_sha256": "9fb72b777fb183eb8e8251bb6660b391bfe95a3a171fd51bde71be2ece9680e9",
+      "local_sha256": "8b3d856d127238b0035808239628f63d0a7e69fd6dbeb6d584c694a98480a73c",
+      "deviation": "Ordinary comments and documentation were removed without changing executable logic; license and attribution notices were retained."
     },
     {
       "local": "trackit/models/methods/SPMTrack/modules/tmoe/__init__.py",
       "upstream": "trackit/models/methods/SPMTrack/modules/tmoe/__init__.py",
-      "status": "verbatim",
-      "upstream_sha256": "5e45984b02262ffdbce76340828a7c6286d2efd106f76d2e3a2d8ddbea1a2220"
+      "status": "modified",
+      "upstream_sha256": "5e45984b02262ffdbce76340828a7c6286d2efd106f76d2e3a2d8ddbea1a2220",
+      "local_sha256": "f3e30d5f5bbdd31c668b92da5b9c8b3d3e6ecfaf8c707ee083847d44f8e36076",
+      "deviation": "Ordinary comments and documentation were removed without changing executable logic; license and attribution notices were retained."
     },
     {
       "local": "trackit/models/methods/SPMTrack/modules/tmoe/merge.py",
@@ -53,8 +59,8 @@
       "upstream": "trackit/models/methods/SPMTrack/modules/tmoe/apply.py",
       "status": "modified",
       "upstream_sha256": "a03728cc69dea60935f05b60dd8675da64fd53a5017b6435e386495816f69163",
-      "local_sha256": "0967e05c7ed47e9d2777f6892dc61a33bebb2811754c7fc6bed2491e7aa3cfb9",
-      "deviation": "find_all_frozen_nn_linear_names returns sorted(...) instead of list(set) so that the TMoE random initialization order does not depend on PYTHONHASHSEED."
+      "local_sha256": "3313d6abbbacb46bb140840e4bb21ce990e3b4d0060cc476b0bea5eadb615526",
+      "deviation": "find_all_frozen_nn_linear_names returns sorted(...) instead of list(set) so that the TMoE random initialization order does not depend on PYTHONHASHSEED. Ordinary comments and documentation were removed without changing executable logic; license and attribution notices were retained."
     },
     {
       "local": "trackit/models/methods/SPMTrack/SPMTrack.py",

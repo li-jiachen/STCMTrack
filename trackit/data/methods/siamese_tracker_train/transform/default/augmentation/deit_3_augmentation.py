@@ -14,9 +14,7 @@ from .pipeline import ImageOnlyAugmentation
 
 
 class GaussianBlur(object):
-    """
-    Apply Gaussian Blur to the PIL image.
-    """
+    
 
     def __init__(self, p=0.1, radius_min=0.1, radius_max=2.):
         self.prob = p
@@ -34,9 +32,7 @@ class GaussianBlur(object):
 
 
 class Solarization(object):
-    """
-    Apply Solarization to the PIL image.
-    """
+    
 
     def __init__(self, p=0.2):
         self.p = p
@@ -48,9 +44,7 @@ class Solarization(object):
 
 
 class gray_scale(object):
-    """
-    Apply Solarization to the PIL image.
-    """
+    
 
     def __init__(self, p=0.2):
         self.p = p

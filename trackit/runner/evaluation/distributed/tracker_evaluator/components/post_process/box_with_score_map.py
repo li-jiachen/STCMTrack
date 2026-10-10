@@ -29,7 +29,7 @@ class PostProcessing_BoxWithScoreMap(TrackerOutputPostProcess):
 
     def __call__(self, output):
         validate_dense_tracking_output(output)
-        # shape: (N, H, W), (N, H, W, 4)
+        
         dense_score_map = output['score_map'].detach().float().sigmoid()
         dense_bbox = output['boxes'].detach().float()
 
@@ -39,7 +39,7 @@ class PostProcessing_BoxWithScoreMap(TrackerOutputPostProcess):
                       self._scale_factor.view(1, 1, 1, 1, 2)).view(N, H, W, 4)
 
         if self._enable_gaussian_score_map_penalty:
-            # window penalty
+            
             score_map_with_penalty = predicted_score_map * (1 - self._window_penalty_ratio) + \
                      self._window.view(1, H * W) * self._window_penalty_ratio
             _, best_idx = torch.max(score_map_with_penalty, 1, keepdim=True)
@@ -48,8 +48,8 @@ class PostProcessing_BoxWithScoreMap(TrackerOutputPostProcess):
 
         predicted_bbox = dense_bbox.view(N, H * W, 4)
         bounding_box = torch.gather(predicted_bbox, 1, best_idx.view(N, 1, 1).expand(-1, -1, 4)).squeeze(1)
-        # Sec. 2.1: response at the predicted box center. The box regressor can
-        # move this center away from the discrete peak used to select a box.
+        
+        
         center = (bounding_box[:, :2] + bounding_box[:, 2:]) * 0.5 / self._scale_factor
         grid = (2.0 * center - 1.0).view(N, 1, 1, 2)
         confidence_score = F.grid_sample(dense_score_map.unsqueeze(1), grid,

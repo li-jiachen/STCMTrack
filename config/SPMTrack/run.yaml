@@ -1,19 +1,3 @@
-# SPMTrack baseline run configuration (independent of config/STCMTrack/run.yaml).
-#
-# Model structure and temporal inference logic: official SPMTrack, github.com/WenRuiCai/SPMTrack,
-#   config/SPMTrack/run.yaml @ c581fe27231f3e16c38578e47daddadfaf6ffd7d  (three templates, two search
-#   frames, "interval" pair sampling, propagated query and online template memory).
-# Data, training budget and evaluation shared with STCMTrack (these settings are not taken from upstream):
-#   * datasets: the Anti-UAV410 / Anti-UAV splits of config/_dataset/*.yaml; upstream's GOT-10k / LaSOT /
-#     TrackingNet / COCO paths and sampling weights are not used;
-#   * training: 80 epochs, AdamW lr 1e-4 / weight decay 0.1, cosine schedule, equally weighted BCE/GIoU;
-#   * shared implementation choices not specified in the paper: global batch 4, 2048 train / 4096 val
-#     samples per epoch, no warm-up or per-parameter decay overrides, hard center targets and mean frame
-#     loss; these are fixed defaults for the public implementation;
-#   * joint flip/color augmentation and temporally consistent search-crop jitter;
-#   * evaluation: no Hann penalty, search crop area factor 5 and min object size 1;
-#   * torch.compile and efficiency assessment off;
-#   * evaluation: the shared one_pass_evaluation_compatible handler and PyTracking export (metrics of Sec. 3.2).
 
 type: "default"
 

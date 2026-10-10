@@ -1,14 +1,4 @@
 #!/usr/bin/env bash
-# Two-stage training (Sec. 3.1 of the paper).
-#
-#   Stage 1: the tracking network (DINOv2-pretrained ViT-B/14 backbone) is trained for 80 epochs.
-#     TRAIN_STAGE=1 DEVICE_IDS=0 ./train_stcmtrack.sh
-#
-#   Stage 2: LTCP is trained for 20 epochs with all other parameters frozen,
-#            initialized from the stage-1 checkpoint (full model snapshots are saved; export LTCP explicitly after training).
-#     TRAIN_STAGE=2 BASE_WEIGHT=/path/to/stage1/checkpoint/epoch_79/model.bin DEVICE_IDS=0 ./train_stcmtrack.sh
-#
-# DATASET=antiuav410 (default) or antiuav300 selects the training set. Extra arguments are passed to boot.sh.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -94,7 +84,6 @@ else
     mixin_names+=(ltcp ltcp_stage2)
     weight_args+=(--weight_path "$BASE_WEIGHT")
     exp_name="STCMTrack-Train-Stage2-${DATASET}"
-    # Validate the stage-1 base before CUDA setup and dataset loading.
     python3 "$REPO_ROOT/tools/check_stcmtrack_weights.py" --base "$BASE_WEIGHT"
 fi
 

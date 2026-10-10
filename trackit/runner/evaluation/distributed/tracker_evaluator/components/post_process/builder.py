@@ -19,7 +19,7 @@ def build_post_process(post_process_config: dict, common_config: dict, device: t
             window_penalty_ratio,
             post_process_config.get('classification_score_do_penalty', False))
     elif post_process_type == 'box_with_score_map_spmtrack':
-        # Official SPMTrack Hann-window post-processing; kept apart from the STCMTrack definition above.
+        
         from .spmtrack_box_with_score_map import PostProcessing_BoxWithScoreMap_SPMTrack
         return PostProcessing_BoxWithScoreMap_SPMTrack(
             device,

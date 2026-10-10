@@ -5,14 +5,7 @@ from . import get_world_size, get_aux_process_group, get_backend, get_aux_backen
 
 
 def reduce_dict(input_dict, average=True):
-    """
-    Args:
-        input_dict (dict): all the values will be reduced
-        average (bool): whether to do average or sum
-    Reduce the values in the dictionary from all processes so that all processes
-    have the averaged results. Returns a dict with the same fields as
-    input_dict, after reduction.
-    """
+    
     if len(input_dict) < 1:
         return input_dict
     world_size = get_world_size()
@@ -24,7 +17,7 @@ def reduce_dict(input_dict, average=True):
     with torch.inference_mode():
         names = []
         values = []
-        # sort the keys so that they are consistent across processes
+        
         for k in sorted(input_dict.keys()):
             names.append(k)
             values.append(input_dict[k])
@@ -62,14 +55,7 @@ def reduce_dict(input_dict, average=True):
 
 class reduce_dict_async:
     def __init__(self, input_dict, average=True):
-        """
-        Args:
-            input_dict (dict): all the values will be reduced
-            average (bool): whether to do average or sum
-        Reduce the values in the dictionary from all processes so that all processes
-        have the averaged results. Returns a dict with the same fields as
-        input_dict, after reduction.
-        """
+        
         self.result = None
         self.async_handle = None
         if len(input_dict) < 1:
@@ -85,7 +71,7 @@ class reduce_dict_async:
         with torch.inference_mode():
             names = []
             values = []
-            # sort the keys so that they are consistent across processes
+            
             for k in sorted(input_dict.keys()):
                 names.append(k)
                 values.append(input_dict[k])

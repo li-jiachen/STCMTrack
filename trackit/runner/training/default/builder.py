@@ -32,7 +32,7 @@ def build_torch_compile_options(config: dict) -> Optional[dict]:
     if int(torch.__version__.split('.')[0]) == 1:
         print("torch.compile is not supported for PyTorch 1.x", file=sys.stderr)
         enabled = False
-    if enabled and get_os_running_on() != OperatingSystem.Linux:  # workaround: to remove when pytorch supports
+    if enabled and get_os_running_on() != OperatingSystem.Linux:  
         print('Only Linux is supported for torch.compile, disabled', file=sys.stderr)
         enabled = False
 

@@ -123,19 +123,19 @@ def compile_bbox_transform(source_format: BoundingBoxFormat, target_format: Boun
                            target_bounding_box_coordinate_system: BoundingBoxCoordinateSystem):
     commands = []
     if source_bounding_box_coordinate_system == BoundingBoxCoordinateSystem.Discrete and target_bounding_box_coordinate_system == BoundingBoxCoordinateSystem.Discrete:
-        # do in integer space
+        
         _compile_bbox_rasterized_transform(commands, source_format, target_format)
     else:
-        # do in float space
+        
         if source_format == BoundingBoxFormat.Polygon or target_format == BoundingBoxFormat.Polygon:
-            # do in polygon routine
+            
             _compile_bbox_to_polygon(commands, source_format, source_bounding_box_coordinate_system)
             _compile_bbox_polygon_transform(commands,
                                             source_bounding_box_coordinate_system,
                                             target_bounding_box_coordinate_system)
             _compile_bbox_polygon_to_any(commands, target_format, target_bounding_box_coordinate_system)
         else:
-            # do in xyxy routine
+            
             _compile_bbox_to_xyxy(commands, source_format, source_bounding_box_coordinate_system)
             _compile_bbox_xyxy_transform(commands,
                                          source_bounding_box_coordinate_system, target_bounding_box_coordinate_system)

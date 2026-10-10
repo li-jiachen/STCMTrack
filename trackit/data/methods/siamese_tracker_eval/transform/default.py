@@ -26,18 +26,18 @@ class SiameseTrackerEval_DefaultDataTransform(SiameseTrackerEval_DataTransform):
     def __call__(self, task: SiameseTrackerEvalDataWorker_Task) -> TrackerEvalData_TaskDesc:
         init_frame_data = None
         if task.do_tracker_init is not None:
-            z = task.do_tracker_init.get_image() # (H, W, 3)
+            z = task.do_tracker_init.get_image() 
             z = torch.from_numpy(z)
-            z = torch.permute(z, (2, 0, 1)) # (3, H, W)
+            z = torch.permute(z, (2, 0, 1)) 
             z = z.to(self.device)
 
             z_bbox = task.do_tracker_init.gt_bbox
 
-            template_curation_parameter = get_siamfc_cropping_params(z_bbox, self.template_area_factor, self.template_size) # 2, [196,196]
+            template_curation_parameter = get_siamfc_cropping_params(z_bbox, self.template_area_factor, self.template_size) 
 
             z_curated, z_image_mean, template_curation_parameter = apply_siamfc_cropping(
                 z.to(torch.float32), self.template_size, template_curation_parameter,
-                self.interpolation_mode, self.interpolation_align_corners) # bilinear, False
+                self.interpolation_mode, self.interpolation_align_corners) 
 
             z_curated.div_(255.)
             self.image_normalize_transform_(z_curated)

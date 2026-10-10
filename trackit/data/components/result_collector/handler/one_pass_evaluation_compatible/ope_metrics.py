@@ -39,12 +39,12 @@ def calc_seq_err_robust(dataset_name, pred_bb, anno_bb, target_visible=None, sta
 def compute_one_pass_evaluation_metrics(dataset_name, pred_bb, anno_bb, target_visible,
                                         time_costs, compatibility_helper, stark_behavior=True,
                                         exclude_invalid_frames=True):
-    # Anti-UAV coordinates must match the exported XYWH results exactly.
+    
     pred_bb = bbox_xyxy_to_xywh(compatibility_helper.adjust(dataset_name, pred_bb))
     anno_bb = bbox_xyxy_to_xywh(compatibility_helper.adjust(dataset_name, anno_bb))
     result = evaluate_sequence(pred_bb, anno_bb, target_visible)
     overlap = result.iou.copy()
-    overlap[~result.valid] = -1.  # CSV diagnostic marker, never enters a metric denominator.
+    overlap[~result.valid] = -1.  
     return OPEMetrics(result.success_curve, result.precision_curve, result.normalized_precision_curve,
                       float(np.mean(time_costs)), result.auc), overlap
 

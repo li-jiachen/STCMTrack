@@ -3,7 +3,7 @@ import torch
 
 
 def validate_dense_tracking_output(output):
-    """Reject invalid model outputs before sigmoid or box selection can hide them."""
+    
     for name in ('score_map', 'boxes'):
         values = output[name]
         finite = torch.isfinite(values)

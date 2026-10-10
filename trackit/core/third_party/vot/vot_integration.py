@@ -1,13 +1,4 @@
-"""
-\file vot.py
 
-@brief Python utility functions for VOT toolkit integration
-
-@author Luka Cehovin, Alessio Dore
-
-@date 2023
-
-"""
 
 import os
 import collections
@@ -27,17 +18,9 @@ Polygon = collections.namedtuple('Polygon', ['points'])
 Empty = collections.namedtuple('Empty', [])
 
 class VOT(object):
-    """ Base class for VOT toolkit integration in Python.
-        This class is only a wrapper around the TraX protocol and can be used for single or multi-object tracking.
-        The wrapper assumes that the experiment will provide new objects onlf at the first frame and will fail otherwise."""
+    
     def __init__(self, region_format, channels=None, multiobject: bool = None):
-        """ Constructor for the VOT wrapper.
-
-        Args:
-            region_format: Region format options
-            channels: Channels that are supported by the tracker
-            multiobject: Whether to use multi-object tracking
-        """
+        
         assert(region_format in [trax.Region.RECTANGLE, trax.Region.POLYGON, trax.Region.MASK])
 
         if multiobject is None:
@@ -80,39 +63,23 @@ class VOT(object):
         self._trax.status(request.objects)
 
     def region(self):
-        """
-        Returns initialization region for the first frame in single object tracking mode.
-
-        Returns:
-            initialization region
-        """
+        
 
         assert not self._multiobject
 
         return self._objects[0]
 
     def objects(self):
-        """
-        Returns initialization regions for the first frame in multi object tracking mode.
-
-        Returns:
-            initialization regions for all objects
-        """
+        
 
         return self._objects
 
     def report(self, status, confidence = None):
-        """
-        Report the tracking results to the client
-
-        Arguments:
-            status: region for the frame or a list of regions in case of multi object tracking
-            confidence: confidence for the object detection, used only in single object tracking mode
-        """
+        
 
         def convert(region):
-            """ Convert region to TraX format """
-            # If region is None, return empty region
+            
+            
             if region is None: return trax.Rectangle.create(0, 0, 0, 0)
             assert isinstance(region, (Empty, Rectangle, Polygon, np.ndarray)), f"unexpected data type, got {type(region)}"
             if isinstance(region, Empty):
@@ -136,12 +103,7 @@ class VOT(object):
         self._trax.status(status, {})
 
     def frame(self):
-        """
-        Get a frame (image path) from client
-
-        Returns:
-            absolute path of the image
-        """
+        
         if hasattr(self, "_image"):
             image = self._image
             del self._image
@@ -149,7 +111,7 @@ class VOT(object):
 
         request = self._trax.wait()
 
-        # Only the first frame can declare new objects for now
+        
         assert request.objects is None or len(request.objects) == 0
 
         if request.type == 'frame':
@@ -161,34 +123,27 @@ class VOT(object):
             return None
 
     def quit(self):
-        """ Quit the tracker"""
+        
         if hasattr(self, '_trax'):
             self._trax.quit()
 
     def __del__(self):
-        """ Destructor for the tracker, calls quit. """
+        
         self.quit()
 
 class VOTManager(object):
-    """ VOT Manager is provides a simple interface for running multiple single object trackers in parallel. Trackers should implement a factory interface. """
+    
 
     def __init__(self, factory, region_format, channels=None):
-        """ Constructor for the manager.
-        The factory should be a callable that accepts two arguments: image and region and returns a callable that accepts a single argument (image) and returns a region.
-
-        Args:
-            factory: Factory function for creating trackers
-            region_format: Region format options
-            channels: Channels that are supported by the tracker
-        """
+        
         self._handle = VOT(region_format, channels, multiobject=True)
         self._factory = factory
 
     def run(self):
-        """ Run the tracker, the tracking loop is implemented in this function, so it will block until the client terminates the connection."""
+        
         objects = self._handle.objects()
 
-        # Process the first frame
+        
         image = self._handle.frame()
         if not image:
             return

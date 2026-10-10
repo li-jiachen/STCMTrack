@@ -24,7 +24,7 @@ class EMAModule:
         if self.step % self.ema_steps == 0:
             self.ema.update_parameters(model)
             if self.global_step < self.lr_warmup_steps:
-                # Reset ema buffer to keep copying weights during warmup period
+                
                 self.ema.n_averaged.fill_(0)
         self.step += 1
         self.global_step += 1

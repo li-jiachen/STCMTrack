@@ -1,7 +1,3 @@
-# Explicit declaration that the weights passed with --weight_path were trained with the official SPMTrack code
-# (github.com/WenRuiCai/SPMTrack @ c581fe27231f3e16c38578e47daddadfaf6ffd7d) but carry no marker of this code.
-# The model still refuses STCMTrack checkpoints, incomplete checkpoints and TMoE scaling mismatches.
-# test_stcmtrack.sh adds this mixin only when ALLOW_UNMARKED_SPMTRACK_WEIGHTS=1 is set.
 - path: "model.allow_unmarked_weights"
   value: true
 - path: "logging.tags"

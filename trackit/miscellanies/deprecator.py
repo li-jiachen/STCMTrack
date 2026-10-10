@@ -7,21 +7,17 @@ string_types = (type(b''), type(u''))
 
 
 def deprecated(reason):
-    """
-    This is a decorator which can be used to mark functions
-    as deprecated. It will result in a warning being emitted
-    when the function is used.
-    """
+    
 
     if isinstance(reason, string_types):
 
-        # The @deprecated is used with a 'reason'.
-        #
-        # .. code-block:: python
-        #
-        #    @deprecated("please, use another function")
-        #    def old_function(x, y):
-        #      pass
+        
+        
+        
+        
+        
+        
+        
 
         def decorator(func1):
 
@@ -47,13 +43,13 @@ def deprecated(reason):
 
     elif inspect.isclass(reason) or inspect.isfunction(reason):
 
-        # The @deprecated is used without any 'reason'.
-        #
-        # .. code-block:: python
-        #
-        #    @deprecated
-        #    def old_function(x, y):
-        #      pass
+        
+        
+        
+        
+        
+        
+        
 
         func2 = reason
 

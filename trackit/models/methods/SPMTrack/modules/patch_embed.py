@@ -21,7 +21,7 @@ class PatchEmbedNoSizeCheck(nn.Module):
 
     def forward(self, x):
         x = self.proj(x)
-        x = x.flatten(2).transpose(1, 2)  # BCHW -> BNC
+        x = x.flatten(2).transpose(1, 2)  
         x = self.norm(x)
         return x
 

@@ -1,8 +1,4 @@
-"""Model builder for the SPMTrack baseline (pinned to WenRuiCai/SPMTrack @ c581fe27231f3e16c38578e47daddadfaf6ffd7d).
 
-Structure follows upstream trackit/models/methods/SPMTrack/builder.py. The training class and the
-streaming inference class are built from the same constructor arguments.
-"""
 from trackit.models import ModelBuildingContext, ModelImplSuggestions
 from trackit.models.backbone.builder import build_backbone
 from trackit.miscellanies.pretty_format import pretty_format
@@ -23,8 +19,8 @@ def build_SPMTrack_model(config: dict, model_impl_suggestions: ModelImplSuggesti
     common_config = config['common']
     model_type = model_config['type']
     if model_type != 'dinov2':
-        # `dinov2_full_finetune` exists in the upstream builder but cannot be constructed there:
-        # it calls the TMoE class without the TMoE arguments.
+        
+        
         raise NotImplementedError(f"SPMTrack model type '{model_type}' is not supported (only 'dinov2').")
     ltcp_config = model_config.get('ltcp', {})
     if ltcp_config.get('enabled', False):

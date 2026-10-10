@@ -7,7 +7,7 @@ from trackit.core.utils.anchor_free_reference_points import get_anchor_free_refe
 
 
 class Mlp(nn.Module):
-    """ Multilayer perceptron."""
+    
 
     def __init__(self, in_features, hidden_features=None, out_features=None,
                  num_layers=2,
@@ -55,15 +55,7 @@ class MlpAnchorFreeHead(nn.Module):
         self.apply(_init_weights)
 
     def forward(self, x):
-        '''
-            Args:
-                x (torch.Tensor): (B, H * W, C) input feature map
-            Returns:
-                Dict: {
-                    'score_map' (torch.Tensor): (B, 1, H, W)
-                    'bbox' (torch.Tensor): (B, H, W, 4)
-                }
-        '''
+        
         W, H = self.map_size
         bbox_offset = self.bbox_offset
 

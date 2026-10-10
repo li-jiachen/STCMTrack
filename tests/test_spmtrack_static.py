@@ -1,12 +1,4 @@
-"""Static checks for the SPMTrack baseline path (configuration, provenance and import structure).
 
-Run: python -m unittest tests.test_spmtrack_static -v
-(from the repository root; `python -m unittest discover -s tests` also picks it up)
-
-They cover the pinned upstream provenance, the VARIANT -> model/component mapping, configuration values,
-import isolation of the baseline from LTCP / CTR / STCMTrack, the Pn definition of the shared evaluation
-core and the checkpoint checks of tools/check_spmtrack_weights.py (on small synthetic files).
-"""
 import ast
 import copy
 import hashlib
@@ -64,7 +56,7 @@ class UpstreamPinTests(unittest.TestCase):
                     self.assertTrue(entry['deviation'])
                 else:
                     self.assertEqual(entry['status'], 'ported')
-                    self.assertTrue(entry['deviation'])  # every rewrite documents its deviations
+                    self.assertTrue(entry['deviation'])  
 
 
 class VariantMappingTests(unittest.TestCase):
@@ -355,7 +347,7 @@ class IsolationTests(unittest.TestCase):
 
 
 class PnDefinitionTests(unittest.TestCase):
-    """Pn (Sec. 3.2): center error / ground-truth box diagonal, strictly below 0.5."""
+    
     SHARED = 'trackit.core.evaluation.antiuav'
 
     def test_every_entry_point_calls_the_shared_core(self):
@@ -378,18 +370,18 @@ class PnDefinitionTests(unittest.TestCase):
         self.assertIn('Sec. 3.2', core)
 
     def test_boundary_values_on_synthetic_boxes(self):
-        gt = [[0, 0, 30, 40]]  # diagonal 50
+        gt = [[0, 0, 30, 40]]  
         pn = lambda dx: evaluate_sequence([[dx, 0, 30, 40]], gt).pn
-        self.assertEqual(pn(24.9), 1.)   # 0.498 < 0.5
-        self.assertEqual(pn(25.0), 0.)   # exactly 0.5 is not below 0.5
+        self.assertEqual(pn(24.9), 1.)   
+        self.assertEqual(pn(25.0), 0.)   
         result = evaluate_sequence([[20, 0, 30, 40]], gt)
-        self.assertEqual((result.pn, result.p20), (1., 0.))  # 20 px: 0.4 of the diagonal, but not below 20 px
+        self.assertEqual((result.pn, result.p20), (1., 0.))  
 
     def test_box_size_scale_is_the_gt_diagonal_not_the_prediction(self):
-        gt = [[0, 0, 30, 40]]  # center (15, 20), diagonal 50
-        tiny_prediction = evaluate_sequence([[20, 0, 3, 4]], gt)  # center (21.5, 2): offset (6.5, -18)
+        gt = [[0, 0, 30, 40]]  
+        tiny_prediction = evaluate_sequence([[20, 0, 3, 4]], gt)  
         self.assertAlmostEqual(tiny_prediction.normalized_error[0], np.hypot(6.5, 18.) / 50.)
-        shifted = evaluate_sequence([[10, 0, 30, 40]], gt)  # same-size prediction, 10 px to the right
+        shifted = evaluate_sequence([[10, 0, 30, 40]], gt)  
         self.assertAlmostEqual(shifted.normalized_error[0], 10. / 50.)
 
 

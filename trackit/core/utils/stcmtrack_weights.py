@@ -1,8 +1,4 @@
-"""Identity checks for the two original, incremental Anti-UAV410 release files.
 
-These hashes identify the published files. They do not establish which training
-snapshot produced them; the original files do not contain that provenance.
-"""
 import hashlib
 
 
@@ -44,11 +40,7 @@ def authenticate_published_legacy(path, component):
 
 
 def validate_query_numerics(track_query, query_embed):
-    """Reject queries whose true variance exceeds the FP32 LayerNorm range.
-
-    Compute the diagnostic in float64 so overflow cannot hide the offending range.
-    This does not alter weights or change the model's precision.
-    """
+    
     import numpy as np
     with np.errstate(over='ignore', invalid='ignore'):
         query = np.asarray(track_query, dtype=np.float32) + np.asarray(query_embed, dtype=np.float32)

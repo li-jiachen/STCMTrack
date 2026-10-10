@@ -5,7 +5,7 @@ filters:
       bounding_box_coordinate_system: "Continuous"
 
 datasets:
-  - name: "ANTIUAV"  # Anti-UAV410; must match trackit/datasets/SOT/datasets/ANTIUAV.py
+  - name: "ANTIUAV"
     type: "SOT"
     splits:
       - "test"

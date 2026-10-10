@@ -12,8 +12,8 @@ from .. import EvaluationResultHandler
 from ..utils.compatibility import ExternalToolkitCompatibilityHelper
 
 
-# This class is a result writer for the OTB evaluation tool and all MATLAB evaluation toolkit based on it,
-#   e.g. LaSOT, TNL2k, VastTrack.
+
+
 class OTBEvaluationToolTrackingResultWriter:
     def __init__(self, output_folder: str, file_name: str):
         self._zip_file = zipfile.ZipFile(os.path.join(output_folder, file_name + '.zip'), 'w', zipfile.ZIP_DEFLATED)

@@ -1,9 +1,4 @@
-"""Unit tests: model and checkpoints, LTCP (Sec. 2.2), CTR (Sec. 2.3), evaluation metrics (Sec. 3.2),
-dataset cache and training-clip sampling.
 
-Run: python -m unittest discover -s tests -v
-The tests use the real modules with a small DINOv2 and synthetic images, and run on the CPU in a few seconds.
-"""
 import contextlib
 import copy
 import io
@@ -72,7 +67,7 @@ class ModelTests(unittest.TestCase):
         expected = train(z, mask, *xs)
         h1.remove(); h2.remove()
         self.assertEqual(histories, [0, 1, 2])
-        self.assertEqual(lengths, [6, 6, 6])  # 1 query token + 1 template token + 4 search tokens
+        self.assertEqual(lengths, [6, 6, 6])  
         for i, x in enumerate(xs):
             actual = infer.forward_tracking([8, 19], z, x, mask)
             for key in ('score_map', 'boxes'):
@@ -307,7 +302,7 @@ class MetricsTests(unittest.TestCase):
         self.assertEqual((invalid.auc, invalid.p20, invalid.pn), (0., 0., 0.))
 
     def test_internal_exported_metrics_and_dataset_aggregation_agree(self):
-        gt = np.array([[0., 0., 30., 40.], [1., 1., 31., 41.], [0., 0., 0., 0.]])  # XYXY
+        gt = np.array([[0., 0., 30., 40.], [1., 1., 31., 41.], [0., 0., 0., 0.]])  
         pred = np.array([[0., 0., 30., 40.], [21., 1., 51., 41.], [10., 10., 30., 30.]])
         flags = [1, 1, 0]
         internal, _ = compute_one_pass_evaluation_metrics('ANTIUAV410', pred, gt, flags, np.ones(3), ExternalToolkitCompatibilityHelper())
@@ -333,7 +328,7 @@ class MetricsTests(unittest.TestCase):
         self.assertEqual(compute_OPE_metrics_mean([internal, internal]).auc, internal.auc)
 
     def test_exported_result_files_are_named_after_the_sequences(self):
-        pred = np.array([[0., 0., 30., 40.], [21., 1., 51., 41.]])  # XYXY, as produced by the tracking pipeline
+        pred = np.array([[0., 0., 30., 40.], [21., 1., 51., 41.]])  
         labels = {'gt_rect': [[0, 0, 30, 40], [1, 1, 30, 40]], 'exist': [1, 1]}
         for dataset in ('ANTIUAV410', 'AntiUAV300'):
             with self.subTest(dataset=dataset), tempfile.TemporaryDirectory() as tmp:
@@ -348,8 +343,8 @@ class MetricsTests(unittest.TestCase):
                     self.assertEqual(archive.namelist(), ['tracker/seq_01.txt'])
                 metric, rows = external.evaluate_antiuav_results(tmp / 'results.zip', tmp / 'gt')
                 self.assertEqual((metric.matched_sequences, rows[0].seq_name, rows[0].used_frames), (1, 'seq_01', 2))
-                self.assertAlmostEqual(metric.auc, (1. + 400 / 2000) / 2)  # IoU 1 and, for the 20-pixel shift, 0.2
-                self.assertEqual(metric.precision_at_20, .5)               # an error of exactly 20 pixels is not below 20
+                self.assertAlmostEqual(metric.auc, (1. + 400 / 2000) / 2)  
+                self.assertEqual(metric.precision_at_20, .5)               
 
     def test_malformed_or_partial_predictions_fail_explicitly(self):
         for text in ('0 0 10 10\nbad line\n0 0 10 10\n', 'nan 0 10 10\n', '0 0 10 10\n\n', ''):

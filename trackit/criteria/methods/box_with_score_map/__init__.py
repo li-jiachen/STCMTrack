@@ -6,7 +6,7 @@ from trackit.miscellanies.torch.distributed.reduce_mean import reduce_mean_
 
 
 class SimpleCriteria(nn.Module):
-    """Center-response classification (binary BCE) + box regression (GIoU), equally weighted by default."""
+    
 
     def __init__(self, cls_loss: nn.Module, bbox_reg_loss: nn.Module,
                  iou_aware_classification_score: bool,
@@ -14,8 +14,8 @@ class SimpleCriteria(nn.Module):
                  cls_loss_display_name: str, bbox_reg_loss_display_name: str, warmup_epochs: int,
                  frame_loss_reduction: str = 'mean'):
         super().__init__()
-        # 'mean': average over the search frames (STCMTrack, Sec. 3.1; the default).
-        # 'sum':  add the search-frame losses (official SPMTrack @ c581fe2).
+        
+        
         if frame_loss_reduction not in ('mean', 'sum'):
             raise ValueError(f"frame_loss_reduction must be 'mean' or 'sum', got {frame_loss_reduction!r}")
         self.frame_loss_reduction = frame_loss_reduction
@@ -39,7 +39,7 @@ class SimpleCriteria(nn.Module):
             num_positive_samples = targets[f'num_positive_samples_{i}']
             assert isinstance(num_positive_samples, torch.Tensor)
 
-            reduce_mean_(num_positive_samples)  # caution: inplace update
+            reduce_mean_(num_positive_samples)  
             num_positive_samples.clamp_(min=1.)
 
             predicted_score_map = output['score_map'].to(torch.float)
@@ -48,9 +48,9 @@ class SimpleCriteria(nn.Module):
 
             N, H, W = predicted_score_map.shape
 
-            # shape: (num_positive_samples, )
+            
             positive_sample_batch_dim_index = targets[f'positive_sample_batch_dim_indices_{i}']
-            # shape: (num_positive_samples, )
+            
             positive_sample_feature_map_dim_index = targets[f'positive_sample_map_dim_indices_{i}']
 
             has_positive_samples = positive_sample_batch_dim_index is not None

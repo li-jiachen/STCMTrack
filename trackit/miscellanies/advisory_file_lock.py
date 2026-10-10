@@ -31,9 +31,9 @@ def try_lock_file(path):
     try:
         file_handle = os.open(path, flags)
     except OSError as e:
-        if e.errno == errno.EEXIST:  # Failed as the file already exists.
+        if e.errno == errno.EEXIST:  
             return _AdvisoryFileLockContext(path, 0, False)
-        else:  # Something unexpected went wrong so reraise the exception.
+        else:  
             raise
     else:
         return _AdvisoryFileLockContext(path, file_handle, True)

@@ -25,9 +25,6 @@ common:
 model:
   template_feat_size: [14, 14]
   type: "dinov2"
-  # Checkpoints written by this code carry `_spmtrack_port_version`. A checkpoint without it (for example the
-  # official SPMTrack release) is refused unless this is set to true, which declares that it was trained with
-  # the official SPMTrack code. STCMTrack checkpoints are always refused.
   allow_unmarked_weights: false
   backbone:
     type: "DINOv2"

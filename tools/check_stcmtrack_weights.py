@@ -26,7 +26,7 @@ def _inspect(path):
         all_keys = set(f.keys())
         format_name = checkpoint_scaling_format(all_keys)
         scaling_keys = LEGACY_SCALING_KEYS if format_name == 'legacy' else SCALING_KEYS
-        # Top-level entries whose names start with an underscore are metadata; the TMoE scaling is the only one read.
+        
         keys = all_keys if format_name == 'legacy' else {
             key for key in all_keys if not key.startswith('_') or key in SCALING_KEYS}
         if any(f.get_slice(key).get_shape() != [] for key in scaling_keys):

@@ -64,4 +64,4 @@ Only the benchmark you run needs to be present. Evaluation reads the test direct
 
 ## Training and evaluation
 
-Use [train_stcmtrack.sh](../train_stcmtrack.sh) for two-stage STCMTrack training and [test_stcmtrack.sh](../test_stcmtrack.sh) for evaluation; the script headers list the commands and supported options. New exports use `weights/retrained/` and explicit `BASE_WEIGHT`/`LTCP_WEIGHT` paths. The released weights are for Anti-UAV410; Anti-UAV requires separately trained checkpoints.
+Use [train_stcmtrack.sh](../train_stcmtrack.sh) for two-stage STCMTrack training and [test_stcmtrack.sh](../test_stcmtrack.sh) for evaluation; [running](RUNNING.md) lists the commands and supported options. See [implementation notes](IMPLEMENTATION_NOTES.md) for checkpoint and reproduction status. New exports use `weights/retrained/` and explicit `BASE_WEIGHT`/`LTCP_WEIGHT` paths. The released weights are for Anti-UAV410; Anti-UAV requires separately trained checkpoints.

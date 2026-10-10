@@ -23,16 +23,7 @@ def make_2tuple(x):
 
 
 class PatchEmbed(nn.Module):
-    """
-    2D image to patch embedding: (B,C,H,W) -> (B,N,D)
-
-    Args:
-        img_size: Image size.
-        patch_size: Patch token size.
-        in_chans: Number of input image channels.
-        embed_dim: Number of linear projection output channels.
-        norm_layer: Normalization layer.
-    """
+    
 
     def __init__(
         self,
@@ -72,12 +63,12 @@ class PatchEmbed(nn.Module):
         assert H % patch_H == 0, f"Input image height {H} is not a multiple of patch height {patch_H}"
         assert W % patch_W == 0, f"Input image width {W} is not a multiple of patch width: {patch_W}"
 
-        x = self.proj(x)  # B C H W
+        x = self.proj(x)  
         H, W = x.size(2), x.size(3)
-        x = x.flatten(2).transpose(1, 2)  # B HW C
+        x = x.flatten(2).transpose(1, 2)  
         x = self.norm(x)
         if not self.flatten_embedding:
-            x = x.reshape(-1, H, W, self.embed_dim)  # B H W C
+            x = x.reshape(-1, H, W, self.embed_dim)  
         return x
 
     def flops(self) -> float:

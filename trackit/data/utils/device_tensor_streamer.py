@@ -54,8 +54,8 @@ class CUDATensorStreamer_WithDataPrefetching:
         self.tensor_filter = tensor_filter
         self.tensor_list = None
 
-    # See NOTE [ Lack of Default `__len__` in Python Abstract Base Classes ] # in pytorch/torch/utils/data/sampler.py
-    #   raise TypeError if __len__ is not implemented
+    
+    
     def __len__(self):
         return len(self.iterator)
 
@@ -106,8 +106,8 @@ class DeviceTensorStreamer:
         self.device = device
         self.tensor_filter = device_tensor_selector
 
-    # See NOTE [ Lack of Default `__len__` in Python Abstract Base Classes ] # in pytorch/torch/utils/data/sampler.py
-    #   raise TypeError if __len__ is not implemented
+    
+    
     def __len__(self):
         return len(self.iterator)
 

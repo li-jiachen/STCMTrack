@@ -64,7 +64,7 @@ def run_task(model_manager: ModelManager, task_desc: ApplicationTaskDescription,
             if is_train:
                 global_step_counter.update(batch_size)
 
-        collective_communication.end()  # may call run() as well
+        collective_communication.end()  
 
         logger.info('waiting for all processes to be ready: begin barrier')
         torch_distributed_barrier()

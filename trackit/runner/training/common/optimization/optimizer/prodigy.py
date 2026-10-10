@@ -14,45 +14,7 @@ else:
 
 
 class Prodigy(torch.optim.Optimizer):
-    r"""
-    Implements Adam with Prodigy step-sizes.
-    Leave LR set to 1 unless you encounter instability.
-
-    Arguments:
-        params (iterable):
-            Iterable of parameters to optimize or dicts defining parameter groups.
-        lr (float):
-            Learning rate adjustment parameter. Increases or decreases the Prodigy learning rate.
-        betas (Tuple[float, float], optional): coefficients used for computing
-            running averages of gradient and its square (default: (0.9, 0.999))
-        beta3 (float):
-            coefficients for computing the Prodidy stepsize using running averages.
-            If set to None, uses the value of square root of beta2 (default: None).
-        eps (float):
-            Term added to the denominator outside of the root operation to improve numerical stability. (default: 1e-8).
-        weight_decay (float):
-            Weight decay, i.e. a L2 penalty (default: 0).
-        decouple (boolean):
-            Use AdamW style decoupled weight decay
-        use_bias_correction (boolean):
-            Turn on Adam's bias correction. Off by default.
-        safeguard_warmup (boolean):
-            Remove lr from the denominator of D estimate to avoid issues during warm-up stage. Off by default.
-        d0 (float):
-            Initial D estimate for D-adaptation (default 1e-6). Rarely needs changing.
-        d_coef (float):
-            Coefficient in the expression for the estimate of d (default 1.0).
-            Values such as 0.5 and 2.0 typically work as well. 
-            Changing this parameter is the preferred way to tune the method.
-        growth_rate (float):
-            prevent the D estimate from growing faster than this multiplicative rate.
-            Default is inf, for unrestricted. Values like 1.02 give a kind of learning
-            rate warmup effect.
-        fsdp_in_use (bool):
-            If you're using sharded parameters, this should be set to True. The optimizer
-            will attempt to auto-detect this, but if you're using an implementation other
-            than PyTorch's builtin version, the auto-detection won't work.
-    """
+    
 
     def __init__(self, params, lr=1.0,
                  betas=(0.9, 0.999), beta3=None,
@@ -94,12 +56,7 @@ class Prodigy(torch.optim.Optimizer):
         return True
 
     def step(self, closure=None):
-        """Performs a single optimization step.
-
-        Arguments:
-            closure (callable, optional): A closure that reevaluates the model
-                and returns the loss.
-        """
+        
         loss = None
         if closure is not None:
             loss = closure()
@@ -153,20 +110,20 @@ class Prodigy(torch.optim.Optimizer):
 
                 grad = p.grad.data
 
-                # Apply weight decay (coupled variant)
+                
                 if decay != 0 and not decouple:
                     grad.add_(p.data, alpha=decay)
 
                 state = self.state[p]
 
-                # State initialization
+                
                 if 'step' not in state:
                     state['step'] = 0
                     state['s'] = torch.zeros_like(p.data).detach()
                     state['p0'] = p.detach().clone()
-                    # Exponential moving average of gradient values
+                    
                     state['exp_avg'] = torch.zeros_like(p.data).detach()
-                    # Exponential moving average of squared gradient values
+                    
                     state['exp_avg_sq'] = torch.zeros_like(p.data).detach()
 
                 exp_avg, exp_avg_sq = state['exp_avg'], state['exp_avg_sq']
@@ -175,10 +132,10 @@ class Prodigy(torch.optim.Optimizer):
                 p0 = state['p0']
 
                 if group_lr > 0.0:
-                    # we use d / d0 instead of just d to avoid getting values that are too small
+                    
                     d_numerator += (d / d0) * dlr * torch.dot(grad.flatten(), (p0.data - p.data).flatten()).item()
 
-                    # Adam EMA updates
+                    
                     exp_avg.mul_(beta1).add_(grad, alpha=d * (1 - beta1))
                     exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=d * d * (1 - beta2))
 
@@ -188,12 +145,12 @@ class Prodigy(torch.optim.Optimizer):
                         s.mul_(beta3).add_(grad, alpha=((d / d0) * dlr))
                     d_denom += s.abs().sum().item()
 
-            ######
+            
 
         d_hat = d
 
-        # if we have not done any progres, return
-        # if we have any gradients available, will have d_denom > 0 (unless \|g\|=0)
+        
+        
         if d_denom == 0:
             return loss
 
@@ -239,11 +196,11 @@ class Prodigy(torch.optim.Optimizer):
 
                 denom = exp_avg_sq.sqrt().add_(d * eps)
 
-                # Apply weight decay (decoupled variant)
+                
                 if decay != 0 and decouple:
                     p.data.add_(p.data, alpha=-decay * dlr)
 
-                ### Take step
+                
                 p.data.addcdiv_(exp_avg, denom, value=-dlr)
 
             group['k'] = k + 1

@@ -52,7 +52,7 @@ def setup_wandb(args, network_config: dict, notes: str, extra_tags: list = None)
             from datetime import datetime
             datetime_str_format = "%Y.%m.%d-%H.%M.%S-%f"
             try:
-                # assume run_id ends with datetime with the same format
+                
                 run_id_split = run_id.split('-')
                 run_id_time = datetime.strptime('-'.join(run_id_split[-3:]), datetime_str_format)
                 datetime_str = datetime.strftime(run_id_time, datetime_str_format)

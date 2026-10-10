@@ -66,7 +66,7 @@ class SiameseTrackerEvaluation_VOTToolkitIntegrator(torch.utils.data.dataset.Ite
                 template_box = np.array(self.vot_box_format_to_ours(template_box), dtype=np.float64)
                 sequence_info = SequenceInfo('vot', None, 'vot',
                                              self._sequence_uuid + '-' + str(index_of_object), None, None)
-                init_context = SiameseTrackerEvalDataWorker_FrameContext(self._index - 1,  # 0
+                init_context = SiameseTrackerEvalDataWorker_FrameContext(self._index - 1,  
                                                                          lambda: template_image,
                                                                          template_box)
 
@@ -110,10 +110,7 @@ class SiameseTrackerEvaluation_VOTToolkitIntegrator(torch.utils.data.dataset.Ite
 
 
 def _rect_from_mask(mask):
-    '''
-    create an axis-aligned rectangle from a given binary mask
-    mask in created as a minimal rectangle containing all non-zero pixels
-    '''
+    
     x_ = np.sum(mask, axis=0)
     y_ = np.sum(mask, axis=1)
     x0 = np.min(np.nonzero(x_)).item()

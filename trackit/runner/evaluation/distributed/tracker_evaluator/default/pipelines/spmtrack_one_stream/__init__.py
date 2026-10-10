@@ -41,15 +41,11 @@ from ....components.tensor_cache import CacheService, TensorCache
 
 from ... import TrackerEvaluationPipeline
 
-NUM_SEGMENTS = 2  # upstream `select_memory_frames`: num_segments = 2
+NUM_SEGMENTS = 2  
 
 
 def select_reference_indices(num_memory_frames: int) -> List[int]:
-    """Indices into the sequence memory for the three template slots (z_0, z_1, z_2).
-
-    memory[0] is the first-frame template; memory[k] is the template cropped from the prediction
-    of tracked frame k.
-    """
+    
     if num_memory_frames < 1:
         raise ValueError('The sequence memory has no initial template')
     if num_memory_frames == 1:
@@ -68,14 +64,14 @@ def select_reference_indices(num_memory_frames: int) -> List[int]:
 class _LocalContext:
     reset_frame_indices: List[int] = field(default_factory=list)
     siamfc_cropping_params_provider: Optional[CroppingParameterProvider] = None
-    # Normalized template crops on the CPU; [0] is the initial template.
+    
     memory_frames: List[torch.Tensor] = field(default_factory=list)
 
 
 class SPMTrackOneStream_Evaluation_MainPipeline(TrackerEvaluationPipeline):
     def __init__(self, device: torch.device,
                  template_image_size: Tuple[int, int],
-                 search_region_image_size: Tuple[int, int],  # W, H
+                 search_region_image_size: Tuple[int, int],  
                  search_curation_parameter_provider_factory: Callable[[], CroppingParameterProvider],
                  model_output_post_process: TrackerOutputPostProcess,
                  interpolation_mode: str, interpolation_align_corners: bool,
@@ -141,7 +137,7 @@ class SPMTrackOneStream_Evaluation_MainPipeline(TrackerEvaluationPipeline):
                 cropping_params_provider.initialize(init_context.gt_bbox)
                 task_context = self.all_tracking_task_local_contexts[task.id]
                 task_context.siamfc_cropping_params_provider = cropping_params_provider
-                # (Re-)initialization starts a fresh memory with the initial template only.
+                
                 task_context.memory_frames = [init_context.input_data['curated_image'].detach().cpu().clone()]
                 task_context.reset_frame_indices.append(init_context.frame_index)
 
@@ -181,8 +177,8 @@ class SPMTrackOneStream_Evaluation_MainPipeline(TrackerEvaluationPipeline):
         x = x / 255.
         self.image_normalization_transform_(x)
 
-        # The selection is computed once; the mask plugin reads it, so z_i and z_i_feat_mask always
-        # refer to the same remembered frames.
+        
+        
         reference_indices: Dict[Any, List[int]] = {}
         memory_lengths: Dict[Any, int] = {}
         template_slots: List[List[torch.Tensor]] = [[], [], []]
@@ -210,9 +206,9 @@ class SPMTrackOneStream_Evaluation_MainPipeline(TrackerEvaluationPipeline):
         x_cropping_params = context.temporary_objects['x_cropping_params']
 
         outputs = self.model_output_post_process(model_outputs)
-        # shape: (num_tracking_sequence), dtype: torch.float
+        
         all_predicted_score = outputs['confidence']
-        # shape: (num_tracking_sequence, 4), dtype: torch.float
+        
         all_predicted_bounding_box = outputs['box']
 
         assert all_predicted_score.ndim == 1
@@ -254,7 +250,7 @@ class SPMTrackOneStream_Evaluation_MainPipeline(TrackerEvaluationPipeline):
                                   predicted_score,
                                   None)
 
-            # Crop the current frame around the predicted box and keep it as a memory template.
+            
             update = self._crop_online_template(tracking_images[task_id], predicted_bounding_box_on_full_search_image)
             if update is None:
                 self.skipped_template_updates += 1
@@ -264,7 +260,7 @@ class SPMTrackOneStream_Evaluation_MainPipeline(TrackerEvaluationPipeline):
                 new_templates[task_id] = (predicted_bounding_box_on_full_search_image.copy(), template_curation_parameter)
 
             if self.visualization:
-                # Verbatim copy of the upstream module; importing the STCMTrack one_stream package would pull in CTR.
+                
                 from .visualization import visualize_tracking_result
                 sequence_info = context.all_tracks[task_id].sequence_info
                 x = self.search_region_cache[index, ...]

@@ -38,7 +38,7 @@ def build_dino_v2_backbone(name: str, load_pretrained: bool, **kwargs):
             model.load_state_dict(torch.hub.load_state_dict_from_url('https://dl.fbaipublicfiles.com/dinov2/dinov2_vitg14/dinov2_vitg14_pretrain.pth'))
     else:
         raise NotImplementedError(f'Unknown DINO v2 model name: {name}')
-    # Set this only after the pretrained state has been loaded successfully. Incremental
-    # tracking checkpoints may omit the frozen backbone, but cannot use a random one.
+    
+    
     model._pretrained_weights_loaded = bool(load_pretrained)
     return model

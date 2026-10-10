@@ -40,7 +40,7 @@ class PostProcessing_BoxWithScoreMap_SPMTrack(TrackerOutputPostProcess):
 
     def __call__(self, output):
         validate_dense_tracking_output(output)
-        # shape: (N, H, W), (N, H, W, 4)
+        
         predicted_score_map = output['score_map'].detach().float().sigmoid()
         predicted_bbox = output['boxes'].detach().float()
 
@@ -48,7 +48,7 @@ class PostProcessing_BoxWithScoreMap_SPMTrack(TrackerOutputPostProcess):
         predicted_score_map = predicted_score_map.view(N, H * W)
 
         if self._enable_gaussian_score_map_penalty:
-            # window penalty
+            
             score_map_with_penalty = predicted_score_map * (1 - self._window_penalty_ratio) + \
                      self._window.view(1, H * W) * self._window_penalty_ratio
             _, best_idx = torch.max(score_map_with_penalty, 1, keepdim=True)

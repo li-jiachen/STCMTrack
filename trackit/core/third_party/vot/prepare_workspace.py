@@ -26,6 +26,6 @@ def prepare_vot_workspace(workspace_path: str, tracker_name: str, tracker_launch
         f.write(f'command = {tracker_launch_command}\n')
         f.write("env_PATH = /usr/local/cuda/bin:$PATH\n")
         f.write("env_LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH\n")
-        # f.write(f'env_PYTHONPATH = {root_path}\n')
-        # f.write(f'env_PYTHONUNBUFFERED = 1\n')
+        
+        
         f.write(f'timeout = {trax_timeout}')

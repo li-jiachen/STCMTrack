@@ -82,15 +82,11 @@ class TrackingDataset_Track:
         raise NotImplementedError()
 
     def get_all_object_bounding_box(self) -> np.ndarray:
-        '''
-        :return: bounding box should be with dtype np.float64
-        '''
+        
         raise NotImplementedError()
 
     def get_all_object_existence_flag(self) -> Optional[np.ndarray]:
-        '''
-        :return: optional, None indicates the object exists in all frames
-        '''
+        
         raise NotImplementedError()
 
     def __len__(self) -> int:
@@ -111,8 +107,8 @@ class _TrackingDataset_BaseFrame:
         raise NotImplementedError()
 
     def get_frame(self) -> np.ndarray:
-        # (H, W, C)
-        # C=3, RGB
+        
+        
         raise NotImplementedError()
 
     def get_frame_file_path(self) -> Optional[str]:
@@ -153,9 +149,7 @@ class TrackingDataset_Object:
         raise NotImplementedError()
 
     def get_bounding_box(self) -> np.ndarray:
-        '''
-        :return: bounding box should be with dtype np.float64
-        '''
+        
         raise NotImplementedError()
 
     def get_existence_flag(self) -> bool:

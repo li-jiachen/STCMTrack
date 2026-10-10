@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compute AUC, P@20 and P_n (Sec. 3.2) of an exported result file on Anti-UAV410 or Anti-UAV."""
+
 from __future__ import annotations
 
 import argparse
@@ -234,7 +234,7 @@ def _run_self_tests():
     miss = evaluate_sequence('s', 's', [[100, 100, 10, 10]], [[0, 0, 10, 10]])
     assert (same.auc, same.precision_at_20, same.norm_precision_at_05) == (1., 1., 1.)
     assert (miss.auc, miss.precision_at_20, miss.norm_precision_at_05) == (0., 0., 0.)
-    # A 30x40 GT has diagonal 50. Error 25 sits exactly on Pn's excluded boundary.
+    
     edge = evaluate_sequence('s', 's', [[25, 0, 30, 40]], [[0, 0, 30, 40]])
     assert edge.norm_precision_at_05 == 0.
     assert evaluate_sequence('s', 's', [[20, 0, 30, 40]], [[0, 0, 30, 40]]).precision_at_20 == 0.

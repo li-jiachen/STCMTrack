@@ -3,7 +3,7 @@ from ._antiuav_layout import construct_antiuav_layout_dataset, antiuav_cache_ide
 
 
 class ANTIUAV_Train_Seed(BaseSeed):
-    """Anti-UAV410 training split (path constant ``ANTIUAV410_TRAIN_PATH`` in consts.yaml)."""
+    
 
     def __init__(self, root_path: str = None, data_split='train'):
         if root_path is None:

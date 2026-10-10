@@ -9,10 +9,9 @@ filters:
       update_validity: true
       remove_invalid_objects: true
       remove_empty_objects: true
-  # Preserve temporal positions; absent frames may not be removed or compacted.
 
 datasets:
-  - name: "ANTIUAV_Val"  # Anti-UAV410; must match trackit/datasets/SOT/datasets/ANTIUAV_Val.py
+  - name: "ANTIUAV_Val"
     type: "SOT"
     splits:
       - "val"

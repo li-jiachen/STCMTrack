@@ -4,7 +4,7 @@ from functools import partial
 
 
 def get_torch_amp_autocast_fn(device_type: str, enabled: bool, dtype: torch.dtype):
-    # to be removed in the future, once they are supported
+    
     if device_type == 'mps' and enabled:
         print('Auto mixed precision is disabled. reason: Auto mixed precision is not supported on MPS.', flush=True)
         enabled = False

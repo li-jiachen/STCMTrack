@@ -25,10 +25,10 @@ class SiamFCCroppingParameter:
     area_factor: float
     scale_jitter_factor: float = 0.
     translation_jitter_factor: float = 0.
-    output_min_object_size_in_pixel: np.ndarray = field(default_factory=lambda: np.array((0., 0.)))  # (width, height)
-    output_min_object_size_in_ratio: float = 0.  # (width, height)
-    output_max_object_size_in_pixel: np.ndarray = field(default_factory=lambda: np.array((float("inf"), float("inf"))))  # (width, height)
-    output_max_object_size_in_ratio: float = 1.  # (width, height)
+    output_min_object_size_in_pixel: np.ndarray = field(default_factory=lambda: np.array((0., 0.)))  
+    output_min_object_size_in_ratio: float = 0.  
+    output_max_object_size_in_pixel: np.ndarray = field(default_factory=lambda: np.array((float("inf"), float("inf"))))  
+    output_max_object_size_in_ratio: float = 1.  
     interpolation_mode: str = 'bilinear'
     interpolation_align_corners: bool = False
 
@@ -123,14 +123,14 @@ class SiamTrackerTrainingPairProcessor(SiameseTrackerTrain_DataTransform):
         for i in range(template_count):
             context[f'z_{i}_cropped_image'] = augmentation_context[f'template_{i}'][0].image
             context[f'z_{i}_cropped_bbox'] = augmentation_context[f'template_{i}'][0].bbox
-        #context['z_cropped_image'] = augmentation_context['template'][0].image
-        #context['z_cropped_bbox'] = augmentation_context['template'][0].bbox
+        
+        
 
         for i in range(search_count):
             context[f'x_{i}_cropped_image'] = augmentation_context[f'search_region_{i}'][0].image
             context[f'x_{i}_cropped_bbox'] = augmentation_context[f'search_region_{i}'][0].bbox
-        #context['x_cropped_image'] = augmentation_context['search_region'][0].image
-        #context['x_cropped_bbox'] = augmentation_context['search_region'][0].bbox
+        
+        
 
 
 def _bbox_clip_to_image_boundary_(bbox: np.ndarray, image: torch.Tensor):

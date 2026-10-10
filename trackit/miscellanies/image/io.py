@@ -11,7 +11,7 @@ import cv2
 
 # https://github.com/lilohuang/PyTurboJPEG/blob/master/README.md
 def _transpose_image(image, orientation) -> np.ndarray:
-    """See Orientation in https://www.exif.org/Exif2-2.PDF for details."""
+    
     if orientation == None: return image
     val = orientation._values[0]
     if val == 1: return image
@@ -35,13 +35,13 @@ def _decode_image_with_pil(image_bytes: bytes, handle_exif_orientation: bool=Fal
 
 local_store = threading.local()
 def _decode_image_with_turbojpeg(image_bytes: bytes, handle_exif_orientation: bool = False) -> np.ndarray:
-    #if not hasattr(local_store, 'jpeg_object'):
-    #    local_store.jpeg_object = TurboJPEG()
-    #image = local_store.jpeg_object.decode(image_bytes, TJPF_RGB)
+    
+    
+    
     buffer = np.frombuffer(image_bytes, dtype=np.uint8)
-    # decode as BGR
+    
     img_bgr = cv2.imdecode(buffer, cv2.IMREAD_COLOR)
-    # convert to RGB (equivalent to TurboJPEG TJPF_RGB)
+    
     image = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
     if handle_exif_orientation:
         orientation = exifread.process_file(io.BytesIO(image_bytes)).get_instance('Image Orientation', None)

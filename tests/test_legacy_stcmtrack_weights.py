@@ -1,4 +1,4 @@
-"""Original incremental .bin loading, authentication and validation atomicity."""
+
 from pathlib import Path
 import tempfile
 import unittest
@@ -20,7 +20,7 @@ torch.set_num_threads(2)
 def make_model(pretrained=True, stage2=True, ltcp=True):
     vit = DinoVisionTransformer(img_size=28, patch_size=14, embed_dim=32, depth=1,
                                num_heads=4, block_chunks=0, init_values=1e-5)
-    # The builder's successful-pretrain contract is tested separately below.
+    
     vit._pretrained_weights_loaded = pretrained
     return STCMTrack_DINOv2(vit, (1, 1), (2, 2), 4, 4., 0., expert_nums=2,
                            ltcp_config={'enabled': ltcp, 'train_only': stage2, 'print_summary': False})
@@ -47,8 +47,8 @@ class LegacyCheckpointTests(unittest.TestCase):
     def write_pair(self, base=None, gate=None):
         save_file(self.base if base is None else base, str(self.base_path))
         save_file(self.gate if gate is None else gate, str(self.gate_path))
-        # Small synthetic model files use the same authenticated-file path as the
-        # real release. Unrecognized hashes are covered without this override.
+        
+        
         identities = {'base': file_sha256(self.base_path), 'ltcp': file_sha256(self.gate_path)}
         context = patch.dict(PUBLISHED_LEGACY_SHA256, identities)
         context.start()
@@ -184,7 +184,7 @@ class LegacyCheckpointTests(unittest.TestCase):
                 self.assert_unchanged(before, target)
 
     def test_overflowing_query_is_rejected_by_checker_and_loader_before_copy(self):
-        # Finite stored values can still overflow the first FP32 LayerNorm.
+        
         changed = dict(self.base)
         changed['track_query'] = torch.zeros_like(changed['track_query'])
         changed['track_query'][0, 0] = 1.e28

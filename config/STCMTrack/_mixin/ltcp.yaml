@@ -1,14 +1,13 @@
-# Local-enhanced Temporal Context Propagation (LTCP, Sec. 2.2).
 - path: "model.ltcp"
   value:
     enabled: true
-    memory_size: 2                    # m
+    memory_size: 2
     detach_memory: true
     eps: 0.000001
     frame_softmax_temperature: 1.0
-    gate_bias_init: -4.0              # b_g initialization
-    confidence_weight_init: 2.0       # initial weight of c_temp in W_g (other entries start at zero)
-    max_gate: 0.05                    # g_max
+    gate_bias_init: -4.0
+    confidence_weight_init: 2.0
+    max_gate: 0.05
     memory_device: "cpu"
     memory_dtype: "float32"
     print_summary: true

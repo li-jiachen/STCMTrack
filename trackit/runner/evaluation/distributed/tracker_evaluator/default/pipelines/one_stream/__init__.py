@@ -27,7 +27,7 @@ class _LocalContext:
 class OneStreamTracker_Evaluation_MainPipeline(TrackerEvaluationPipeline):
     def __init__(self, device: torch.device,
                  template_image_size: Tuple[int, int],
-                 search_region_image_size: Tuple[int, int],  # W, H
+                 search_region_image_size: Tuple[int, int],  
                  search_curation_parameter_provider_factory: Callable[[], CroppingParameterProvider],
                  model_output_post_process: TrackerOutputPostProcess,
                  segmentify_post_process: Optional[Segmentify_PostProcessor],
@@ -122,10 +122,10 @@ class OneStreamTracker_Evaluation_MainPipeline(TrackerEvaluationPipeline):
                 image_size = np.array((W, H), dtype=np.int32)
                 image_size_list.append(image_size)
                 if self.ctr is not None:
-                    # CTR / Motion Center Correction: re-center the search crop on B_t^geo.
+                    
                     geometric_bbox = self.ctr.compensate_search_bbox(task.id, x, image_size)
                     if geometric_bbox is not None:
-                        cropping_params_provider.initialize(geometric_bbox)  # Preserve w/h, including at image borders.
+                        cropping_params_provider.initialize(geometric_bbox)  
                 cropping_params = cropping_params_provider.get(np.array(self.search_region_image_size))
                 _, _, cropping_params = \
                     apply_siamfc_cropping(x, np.array(self.search_region_image_size), cropping_params,
@@ -161,11 +161,11 @@ class OneStreamTracker_Evaluation_MainPipeline(TrackerEvaluationPipeline):
         x_cropping_params = context.temporary_objects['x_cropping_params']
 
         outputs = self.model_output_post_process(model_outputs)
-        # shape: (num_tracking_sequence), dtype: torch.float
+        
         all_predicted_score = outputs['confidence']
-        # shape: (num_tracking_sequence, 4), dtype: torch.float
+        
         all_predicted_bounding_box = outputs['box']
-        # shape: (num_tracking_sequence, H, W), dtype: torch.bool, allow None
+        
         all_predicted_mask = outputs.get('mask', None)
 
         assert all_predicted_score.ndim == 1
@@ -204,7 +204,7 @@ class OneStreamTracker_Evaluation_MainPipeline(TrackerEvaluationPipeline):
             if task.tracker_do_tracking_context is not None
         }
         if self.ctr is not None:
-            # CTR / Residual-Guided Target Correction of low-confidence predictions (s_t < tau).
+            
             for index, (task_id, image_size) in enumerate(zip(task_ids, x_frame_sizes)):
                 corrected_bbox, _ = self.ctr.correct_prediction(
                     task_id, tracking_images[task_id],
@@ -241,7 +241,7 @@ class OneStreamTracker_Evaluation_MainPipeline(TrackerEvaluationPipeline):
                                                  all_predicted_bounding_box_on_full_search_image))
         for index, (task_id, image_size, frame_index) in enumerate(zip(task_ids, x_frame_sizes, x_frame_indices)):
             predicted_score = all_predicted_score[index].item()
-            predicted_bounding_box_on_full_search_image = all_predicted_bounding_box_on_full_search_image[index]  # final box B_t
+            predicted_bounding_box_on_full_search_image = all_predicted_bounding_box_on_full_search_image[index]  
             local_task_context = self.all_tracking_task_local_contexts[task_id]
             local_task_context.siamfc_cropping_params_provider.update(predicted_score,
                                                                       predicted_bounding_box_on_full_search_image,

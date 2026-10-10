@@ -1,21 +1,4 @@
-"""Local-enhanced Temporal Context Propagation (LTCP), Sec. 2.2 of the paper.
 
-LTCP enhances the current search tokens X_t (N x D) with the memory M_{t-1}
-(k_t x N x D) of the k_t <= m most recent frames and the target state token q_t:
-
-* Frame-level correlation: the search tokens of each frame are mean-pooled,
-  normalized dot-product similarities between the current and historical
-  pooled features are turned into frame weights with a softmax, and the
-  weights aggregate the historical tokens into the context C_t. The weighted
-  frame similarity mapped to [0, 1] is the global confidence c^g_t.
-* Local consistency, Eq. (1): p_{t,i} = max_k <Norm(X_{t,i}), Norm(M_{t-1,k,i})>,
-  mapped from [-1, 1] to [0, 1] as the local confidence c^l_{t,i};
-  c^temp_{t,i} = c^g_t * c^l_{t,i}.
-* Gate, Eq. (2): g_{t,i} = sigmoid(W_g [c^temp_{t,i}; q_t] + b_g) * g_max.
-* Fusion, Eq. (3): X~_{t,i} = (1 - g_{t,i}) X_{t,i} + g_{t,i} C_{t,i}.
-
-The memory stores X_t (before fusion) and is updated after each forward pass.
-"""
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
@@ -29,14 +12,14 @@ import torch.nn.functional as F
 @dataclass
 class LTCPConfig:
     enabled: bool = False
-    train_only: bool = False  # training stage 2: only LTCP is optimized
-    memory_size: int = 2  # m
+    train_only: bool = False  
+    memory_size: int = 2  
     detach_memory: bool = True
     eps: float = 1e-6
     frame_softmax_temperature: float = 1.0
-    gate_bias_init: float = -4.0  # initial b_g
-    confidence_weight_init: float = 2.0  # initial weight of c^temp in W_g (the other weights start at zero)
-    max_gate: float = 0.05  # g_max
+    gate_bias_init: float = -4.0  
+    confidence_weight_init: float = 2.0  
+    max_gate: float = 0.05  
     memory_device: str = "cpu"
     memory_dtype: str = "float32"
     print_summary: bool = True
@@ -73,7 +56,7 @@ class LocalEnhancedTemporalContextPropagation(nn.Module):
     def __init__(self, embed_dim: int, config: LTCPConfig):
         super().__init__()
         self.config = config
-        self.gate = nn.Linear(embed_dim + 1, 1)  # W_g, b_g of Eq. (2); input [c^temp; q_t]
+        self.gate = nn.Linear(embed_dim + 1, 1)  
         self._stats = _LTCPStats()
         self.reset_parameters()
 
@@ -132,27 +115,27 @@ class LocalEnhancedTemporalContextPropagation(nn.Module):
         x_norm = F.normalize(x.float(), p=2, dim=-1, eps=self.config.eps)
         memory_norm = F.normalize(memory.float(), p=2, dim=-1, eps=self.config.eps)
 
-        # Eq. (1): p_{t,i}, maximum cosine similarity over the stored frames at the same token position.
+        
         pixel_similarity = (x_norm.unsqueeze(1) * memory_norm).sum(dim=-1).amax(dim=1)
-        local_conf = ((pixel_similarity + 1.0) * 0.5).clamp_(0.0, 1.0)  # c^l_{t,i}
+        local_conf = ((pixel_similarity + 1.0) * 0.5).clamp_(0.0, 1.0)  
 
-        # Frame-level correlation: mean-pooled frame features, softmax frame weights, context C_t.
+        
         x_frame = F.normalize(x.float().mean(dim=1), p=2, dim=-1, eps=self.config.eps)
         memory_frame = F.normalize(memory.float().mean(dim=2), p=2, dim=-1, eps=self.config.eps)
         frame_similarity = (memory_frame * x_frame.unsqueeze(1)).sum(dim=-1)
         temperature = max(float(self.config.frame_softmax_temperature), self.config.eps)
         frame_weight = torch.softmax(frame_similarity / temperature, dim=1)
 
-        memory_tokens = torch.einsum('bt,btnd->bnd', frame_weight.to(memory.dtype), memory)  # C_t
+        memory_tokens = torch.einsum('bt,btnd->bnd', frame_weight.to(memory.dtype), memory)  
         frame_similarity_agg = (frame_weight * frame_similarity).sum(dim=1, keepdim=True)
-        global_conf = ((frame_similarity_agg + 1.0) * 0.5).clamp_(0.0, 1.0)  # c^g_t
+        global_conf = ((frame_similarity_agg + 1.0) * 0.5).clamp_(0.0, 1.0)  
 
-        temporal_confidence = (local_conf * global_conf).unsqueeze(-1).to(dtype=state_token.dtype)  # c^temp_{t,i}
+        temporal_confidence = (local_conf * global_conf).unsqueeze(-1).to(dtype=state_token.dtype)  
         state_token_expand = state_token.expand(-1, x.size(1), -1)
         gate_input = torch.cat((temporal_confidence, state_token_expand), dim=-1)
         gate = torch.sigmoid(self.gate(gate_input)).to(dtype=x.dtype)
-        gate = gate * max_gate  # Eq. (2): g_{t,i}
-        return x * (1.0 - gate) + memory_tokens.to(dtype=x.dtype) * gate  # Eq. (3)
+        gate = gate * max_gate  
+        return x * (1.0 - gate) + memory_tokens.to(dtype=x.dtype) * gate  
 
 
 def get_ltcp_memory_dtype(dtype_name: str, fallback: torch.dtype):

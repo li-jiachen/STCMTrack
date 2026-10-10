@@ -4,13 +4,13 @@ from typing import Sequence, Union, Tuple, List
 import torch.utils.data
 
 
-# from torch.utils.data._utils.collate
+
 def _collate_tensor_fn(batch: Union[Tuple[torch.Tensor, ...], List[torch.Tensor]], dim: int = 0):
     elem = batch[0]
     out = None
     if torch.utils.data.get_worker_info() is not None:
-        # If we're in a background process, concatenate directly into a
-        # shared memory tensor to avoid an extra copy
+        
+        
         numel = sum(x.numel() for x in batch)
         storage = elem._typed_storage()._new_shared(numel, device=elem.device)
         new_shape = list(elem.size())

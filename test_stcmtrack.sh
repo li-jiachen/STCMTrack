@@ -1,23 +1,4 @@
 #!/usr/bin/env bash
-# Evaluate the eight configurations in Table 2 of the paper.
-#
-#   DEVICE_IDS=0 ./test_stcmtrack.sh                       # full model on the Anti-UAV410 test set
-#   VARIANT=baseline BASE_WEIGHT=/path/to/spmtrack.safetensors DEVICE_IDS=0 ./test_stcmtrack.sh  # row 1
-#   VARIANT=mcc_rgtc DEVICE_IDS=0 ./test_stcmtrack.sh      # Table 2, row 7
-#   DATASET=antiuav300 DEVICE_IDS=0 ./test_stcmtrack.sh    # Anti-UAV
-#   EVAL_SCOPE=short DEVICE_IDS=0 ./test_stcmtrack.sh      # quick run: 4 sequences, at most 200 frames each
-#
-# VARIANT (module combinations in Table 2): baseline(1) ltcp(2) mcc(3) rgtc(4) ltcp_mcc(5)
-#   ltcp_rgtc(6) mcc_rgtc(7) full(8, default).
-#   baseline             independent SPMTrack, used by Table 2 row 1 and the Table 1 comparison:
-#                        three templates, propagated query state,
-#                        head-input re-weighting, Hann window; official WenRuiCai/SPMTrack @ c581fe2), without
-#                        LTCP, MCC and RGTC. It uses its own weight file (spmtrack_baseline.safetensors);
-#                        STCMTrack weights are refused. ALLOW_UNMARKED_SPMTRACK_WEIGHTS=1 declares a file
-#                        without the marker of this code as trained with the official SPMTrack code.
-#   ltcp ... full        STCMTrack (method STCMTrack) with the components of the row switched on.
-# Rows 2-8 share the STCMTrack base network and non-component settings. Row 1 retains the original
-# SPMTrack structure and inference; it requires separate SPMTrack weights.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -76,7 +57,7 @@ case "$EVAL_SCOPE" in
 esac
 
 VARIANT="${VARIANT:-full}"
-method_name=STCMTrack   # model family that boot.sh builds: STCMTrack or SPMTrack
+method_name=STCMTrack
 case "$VARIANT" in
     baseline) method_name=SPMTrack; variant_mixins=();         use_ltcp=false ;;
     ltcp)      variant_mixins=(ltcp);                         use_ltcp=true ;;
@@ -110,7 +91,6 @@ case "$DATASET" in
     *) echo "Unsupported DATASET: $DATASET (expected antiuav410 or antiuav300)" >&2; exit 1 ;;
 esac
 if [[ "$method_name" == SPMTrack ]]; then
-    # The separate SPMTrack comparison needs weights trained with its own structure.
     case "$DATASET" in
         antiuav410) default_base_weight="$REPO_ROOT/weights/spmtrack_baseline.safetensors" ;;
         antiuav300) default_base_weight="$REPO_ROOT/weights/spmtrack_antiuav300_baseline.safetensors" ;;
@@ -120,7 +100,6 @@ printf 'Evaluation scope: %s | variant: %s | model: %s | dataset: %s\n' "$EVAL_S
 
 BASE_WEIGHT="${BASE_WEIGHT:-$default_base_weight}"
 LTCP_WEIGHT="${LTCP_WEIGHT:-$default_ltcp_weight}"
-# Read the same constants as the tracker; explicit overrides are exported to its dataset seed.
 if [[ -z "${ANTIUAV_GT_DIR:-}" ]]; then
     ANTIUAV_GT_DIR="$(python3 - "$DATASET" <<'PYCODE'
 import sys

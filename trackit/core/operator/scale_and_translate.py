@@ -19,22 +19,7 @@ def scale_and_translate(img: torch.Tensor, output_size: np.ndarray,
                         output_img: Optional[torch.Tensor] = None,
                         return_adjusted_params: bool = False) \
         -> Union[torch.Tensor, Tuple[torch.Tensor, np.ndarray, np.ndarray]]:
-    """
-    Args:
-        img (torch.Tensor): (n, c, h, w) or (c, h, w)
-        output_size (np.ndarray): (2)
-        scale (np.ndarray): (n, 2) or (2)
-        translation (np.ndarray): (n, 2) or (2)
-        background_color (torch.Tensor | None): (n, c) or (n, 1) or (c)
-        mode (str): interpolation algorithm
-        align_corners (bool): interpolation align at corners or half pixel centers (refers to the source image)
-        output_img (torch.Tensor | None): (n, c, h, w) or (c, h, w)
-        return_adjusted_params (bool): Whether to return the adjusted scale and translation factor due to the pixel aligned cropping
-    Returns:
-        Union[torch.Tensor, Tuple[torch.Tensor, np.ndarray, np.ndarray]]:
-            - If return_adjusted_params is False: Transformed image
-            - If return_adjusted_params is True: (Transformed image, adjusted scale, adjusted translation)
-    """
+    
     img_dtype = img.dtype
     device = img.device
     bbox_dtype = scale.dtype
@@ -76,7 +61,7 @@ def scale_and_translate(img: torch.Tensor, output_size: np.ndarray,
     input_bbox = bbox_scale_and_translate(output_bbox, reverse_scale, reverse_translation)
     bbox_rasterize_(input_bbox)
     bbox_clip_to_image_boundary_(input_bbox, np.asarray((w, h), dtype=bbox_dtype))
-    output_bbox_validity = bbox_is_valid(output_bbox)  # x1 < x2, y1 < y2 is valid
+    output_bbox_validity = bbox_is_valid(output_bbox)  
     output_bbox = torch.from_numpy(output_bbox).to(torch.long)
     input_bbox = torch.from_numpy(input_bbox).to(torch.long)
 
@@ -116,13 +101,13 @@ def scale_and_translate(img: torch.Tensor, output_size: np.ndarray,
     return output_img
 
 
-# generally aligned with tf.raw_ops.ScaleAndTranslate. note that our input is in (w, h) format
-# about 1.7x slower than the pixel aligned implementation (above) on CPU
+
+
 def scale_and_translate_subpixel(image: torch.Tensor, size: Tuple[int, int],
                                  scale: Union[torch.Tensor, np.ndarray], translation: Union[torch.Tensor, np.ndarray],
                                  interpolation_mode: str = 'bilinear', align_corners: bool = False,
                                  padding_mode: str = 'zeros') -> torch.Tensor:
-    # Ensure the image is a 4D tensor (batch, channels, height, width)
+    
     if image.dim() == 3:
         image = image.unsqueeze(0)
 
@@ -152,7 +137,7 @@ def scale_and_translate_subpixel(image: torch.Tensor, size: Tuple[int, int],
     grid.sub_(translation)
     grid.mul_(2).sub_(1)
 
-    # Perform the transformation using grid_sample
+    
     transformed_image = F.grid_sample(image, grid, mode=interpolation_mode, padding_mode=padding_mode, align_corners=align_corners)
 
-    return transformed_image.squeeze(0)  # Remove batch dimension if input was 3D
+    return transformed_image.squeeze(0)  

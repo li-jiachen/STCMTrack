@@ -13,7 +13,7 @@ class LocalMetricLoggerWrapper(MetricLoggerInterface):
         self.header = header
         self.no_name_prefix_meters = set()
         self.logger = LocalMetricLogger(delimiter=' ', print_freq=print_freq)
-        # self.logger.enable_monitoring_cpu_percent()
+        
         self.logger.enable_monitoring_system_total_resident_set_size()
         if monitor_cuda_device_memory:
             self.logger.enable_monitoring_cuda_device_memory_allocated()
@@ -37,8 +37,8 @@ class LocalMetricLoggerWrapper(MetricLoggerInterface):
         self.epoch_header = None
 
     def log(self, meters,
-            force: bool = False,  # ignore
-            step: int = 0   # ignore
+            force: bool = False,  
+            step: int = 0   
             ) -> None:
         if self.prefix is not None:
             meters = {self.prefix + k if k not in self.no_name_prefix_meters else k: v for k, v in meters.items()}

@@ -11,7 +11,7 @@ class TrackerEvalData_FrameData(NamedTuple):
 
 
 class TrackerEvalData_TaskDesc(NamedTuple):
-    id: int  # global unique task index
+    id: int  
 
     task_creation_context: Optional[SequenceInfo]
     tracker_do_init_context: Optional[TrackerEvalData_FrameData]

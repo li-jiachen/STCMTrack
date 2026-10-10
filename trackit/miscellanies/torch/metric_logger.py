@@ -70,14 +70,12 @@ class DefaultProgressTracker(ProgressTrackerInterface):
             return None
         return self._rate * (self._total - self._index - 1)
 
-    def rate(self):  # we have no way to know the batch size by default
+    def rate(self):  
         return None
 
 
 class SmoothedValue(object):
-    """Track a series of values and provide access to smoothed values over a
-    window or the global series average.
-    """
+    
 
     def __init__(self, window_size: int = 20, fmt: Optional[str] = None):
         if fmt is None:

@@ -9,17 +9,17 @@ import psutil
 
 
 def get_listening_ports(with_process_name: bool = True):
-    # Get a list of all active connections
+    
     connections = psutil.net_connections(kind='inet')
 
     listening_ports = []
 
     for conn in connections:
-        # Check if the connection status is 'LISTEN'
+        
         if conn.status == psutil.CONN_LISTEN:
             if with_process_name:
                 try:
-                    # Fetch the process name using the PID
+                    
                     process = psutil.Process(conn.pid)
                     process_name = process.name()
                 except psutil.NoSuchProcess:

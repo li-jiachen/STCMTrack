@@ -24,8 +24,8 @@ def _check_input(value, name, center=1, bound=(0, float("inf")), clip_first_on_z
     if not bound[0] <= value[0] <= value[1] <= bound[1]:
         raise ValueError(f"{name} values should be between {bound}, but got {value}.")
 
-    # if value is 0 or (1., 1.) for brightness/contrast/saturation
-    # or (0., 0.) for hue, do nothing
+    
+    
     if value[0] == value[1] == center:
         return None
     else:

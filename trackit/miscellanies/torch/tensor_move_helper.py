@@ -27,7 +27,7 @@ def replace_torch_tensor_in_object(data, tensor_list: list):
         return data
     elif isinstance(data, Mapping):
         return {k: replace_torch_tensor_in_object(sample, tensor_list) for k, sample in data.items()}
-    elif isinstance(data, tuple) and hasattr(data, '_fields'):  # namedtuple
+    elif isinstance(data, tuple) and hasattr(data, '_fields'):  
         return type(data)(*(replace_torch_tensor_in_object(sample, tensor_list) for sample in data))
     elif isinstance(data, MutableSequence):
         return [replace_torch_tensor_in_object(sample, tensor_list) for sample in data]

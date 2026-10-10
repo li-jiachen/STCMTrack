@@ -9,21 +9,8 @@ def varifocal_loss(pred,
                    alpha=0.75,
                    gamma=2.0,
                    iou_weighted=True):
-    """`Varifocal Loss <https://arxiv.org/abs/2008.13367>`_
-    Args:
-        pred (torch.Tensor): The prediction with shape (N, C), C is the
-            number of classes
-        target (torch.Tensor): The learning target of the iou-aware
-            classification score with shape (N, C), C is the number of classes.
-        alpha (float, optional): A balance factor for the negative part of
-            Varifocal Loss, which is different from the alpha of Focal Loss.
-            Defaults to 0.75.
-        gamma (float, optional): The gamma for calculating the modulating
-            factor. Defaults to 2.0.
-        iou_weighted (bool, optional): Whether to weight the loss of the
-            positive example with the iou target. Defaults to True.
-    """
-    # pred and target should be of the same size
+    
+    
     assert pred.size() == target.size()
     pred_sigmoid = pred.sigmoid()
     target = target.type_as(pred)
@@ -45,16 +32,7 @@ class VarifocalLoss(nn.Module):
                  alpha=0.75,
                  gamma=2.0,
                  iou_weighted=True):
-        """`Varifocal Loss <https://arxiv.org/abs/2008.13367>`_
-        Args:
-            alpha (float, optional): A balance factor for the negative part of
-                Varifocal Loss, which is different from the alpha of Focal
-                Loss. Defaults to 0.75.
-            gamma (float, optional): The gamma for calculating the modulating
-                factor. Defaults to 2.0.
-            iou_weighted (bool, optional): Whether to weight the loss of the
-                positive examples with the iou target. Defaults to True.
-        """
+        
         super(VarifocalLoss, self).__init__()
         assert alpha >= 0.0
         self.alpha = alpha
@@ -64,13 +42,7 @@ class VarifocalLoss(nn.Module):
     def forward(self,
                 pred,
                 target):
-        """Forward function.
-        Args:
-            pred (torch.Tensor): The prediction.
-            target (torch.Tensor): The learning target of the prediction.
-        Returns:
-            torch.Tensor: The calculated loss
-        """
+        
         return varifocal_loss(
             pred,
             target,

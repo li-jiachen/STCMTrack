@@ -10,7 +10,7 @@ def build_tracker_evaluator_data_pipeline(evaluator_config: dict, config: dict, 
         from .one_stream.builder import build_one_stream_tracker_pipeline
         return build_one_stream_tracker_pipeline(pipeline_config, config, device)
     elif pipeline_config['type'] == 'spmtrack_one_stream_tracker':
-        # Independent SPMTrack baseline pipeline (three templates, query state); no CTR.
+        
         from .spmtrack_one_stream.builder import build_spmtrack_one_stream_tracker_pipeline
         return build_spmtrack_one_stream_tracker_pipeline(pipeline_config, config, device)
     else:

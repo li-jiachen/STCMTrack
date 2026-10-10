@@ -40,7 +40,7 @@ class WorkerInfo:
 __worker_info: Optional[WorkerInfo] = None
 
 
-# return None if current process is not a worker
+
 def get_current_worker_info() -> Optional[WorkerInfo]:
     return __worker_info
 

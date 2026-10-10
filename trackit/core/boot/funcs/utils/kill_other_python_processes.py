@@ -1,8 +1,8 @@
 import os
 
 
-# This function kills all other python processes except the current process and its parent process.
-# Used for auto hyper-parameter tuning.
+
+
 def kill_other_python_processes():
     self_pid = os.getpid()
     parent_pid = os.getppid()

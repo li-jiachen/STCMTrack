@@ -7,13 +7,7 @@ from PIL import Image
 
 
 def construct_antiuav_layout_dataset(constructor, root_path: str, expected_sequences=None):
-    """Build a single-object tracking dataset from the Anti-UAV410 on-disk layout.
-
-    Each sequence is a directory under ``root_path`` that contains the frames
-    ``000001.jpg, 000002.jpg, ...`` and an ``IR_label.json`` file with the keys
-    ``exist`` (per-frame target presence flag) and ``gt_rect`` ([x, y, w, h]).
-    ``tools/prepare_antiuav.py`` converts the infrared videos of Anti-UAV to this layout.
-    """
+    
     sequence_names = [d for d in os.listdir(root_path) if os.path.isdir(os.path.join(root_path, d))]
     sequence_names.sort()
 
@@ -69,7 +63,7 @@ def construct_antiuav_layout_dataset(constructor, root_path: str, expected_seque
 
 
 def antiuav_cache_identity(root_path):
-    """Invalidate cached annotations when a split path, sequence set or labels change."""
+    
     root = Path(root_path).expanduser().resolve()
     digest = hashlib.sha256(str(root).encode('utf-8'))
     for sequence in sorted(path for path in root.iterdir() if path.is_dir()):

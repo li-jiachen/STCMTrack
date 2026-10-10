@@ -15,8 +15,8 @@ def find_all_frozen_nn_linear_names(model, inference=False):
             if isinstance(module, cls):
                 tmoe_module_names.add(name)
 
-    # Deviation from SPMTrack@c581fe2 (`list(set)`): a deterministic order makes the TMoE random
-    # initialization reproducible; PYTHONHASHSEED otherwise changes the order of RNG consumption.
+    
+    
     return sorted(tmoe_module_names)
 
 

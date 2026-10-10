@@ -10,7 +10,7 @@ _builtin_rules = (
             'name': 'LaSOT',
         },
         'action': {
-            'to_1_based_indexing': True,  # like in MATLAB
+            'to_1_based_indexing': True,  
             'rasterize': False,
         }
     },{
@@ -23,7 +23,7 @@ _builtin_rules = (
         }
     }, {
         'match': {
-            'name_regex': '(?i)^anti-?uav',  # Anti-UAV410 / Anti-UAV: result files are named after the sequences
+            'name_regex': '(?i)^anti-?uav',  
         },
         'action': {
             'rasterize': False,
@@ -54,7 +54,7 @@ _builtin_rules = (
         }
     }, {
         'match':
-            { 'name_regex': '.*' }, # match any
+            { 'name_regex': '.*' }, 
         'action': {
             'rasterize': False
         }

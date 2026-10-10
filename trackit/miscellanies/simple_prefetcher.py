@@ -1,7 +1,7 @@
 import threading
 
-# Notices: 1. The correctness is relied on GIL
-#          2. Iterator is not thread-safe, so don't access by different threads in the same time
+
+
 class _SimplePrefetcherIterator:
     def __init__(self, iterable, low_limit: int, high_limit: int):
         super(_SimplePrefetcherIterator, self).__init__()
@@ -30,7 +30,7 @@ class _SimplePrefetcherIterator:
             else:
                 with self.produced_condition:
                     while True:
-                        # Release GIL
+                        
                         if self.produced_condition.wait(0.5):
                             break
                         else:
@@ -40,7 +40,7 @@ class _SimplePrefetcherIterator:
                                 if self.exp is not None:
                                     raise self.exp
                                 raise StopIteration
-                            # Release GIL
+                            
                             if not self.thread.is_alive():
                                 if self.exp is not None:
                                     raise self.exp

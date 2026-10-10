@@ -1,4 +1,3 @@
-# Ablation (Table 2): disable Residual-Guided Target Correction; low-confidence predictions are kept.
 - path: "run.runner.test.evaluator.pipeline.ctr.rgtc_enabled"
   value: false
 - path: "logging.tags"

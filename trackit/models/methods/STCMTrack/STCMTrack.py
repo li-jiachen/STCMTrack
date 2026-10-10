@@ -40,7 +40,7 @@ class STCMTrack_DINOv2(nn.Module):
         self._base_checkpoint_format = None
         self._legacy_base_sha256 = None
         self._pretrained_backbone_loaded = bool(getattr(vit, '_pretrained_weights_loaded', False))
-        # TMoE scaling: stored in every checkpoint and compared with the configuration when one is loaded.
+        
         self.register_buffer('_expert_alpha', torch.tensor(float(expert_alpha), dtype=torch.float64))
         self.register_buffer('_use_rsexpert', torch.tensor(bool(use_rsexpert)))
         self.expert_alpha = expert_alpha
@@ -63,12 +63,12 @@ class STCMTrack_DINOv2(nn.Module):
         self.head = MlpAnchorFreeHead(self.embed_dim, self.x_size)
         self.ltcp_config = LTCPConfig.from_dict(ltcp_config)
         self.ltcp = LocalEnhancedTemporalContextPropagation(self.embed_dim, self.ltcp_config) if self.ltcp_config.enabled else None
-        # Capture stage-1 parameters before stage 2 freezes them. An incremental base
-        # must contain every one of these parameters, including queries and prediction heads.
+        
+        
         self._tracking_trainable_keys = frozenset(name for name, parameter in self.named_parameters()
                                                  if parameter.requires_grad and not name.startswith('ltcp.'))
         if self.ltcp_config.enabled and self.ltcp_config.train_only:
-            # Training stage 2: only LTCP is optimized; backbone adapters, queries and heads stay frozen.
+            
             self._freeze_except_ltcp()
 
     def _freeze_except_ltcp(self):
@@ -77,13 +77,7 @@ class STCMTrack_DINOv2(nn.Module):
 
     def forward(self, z_0: torch.Tensor, z_0_feat_mask: torch.Tensor,
                 x_0: torch.Tensor, x_1: torch.Tensor, x_2: torch.Tensor):
-        """One first-frame template and three chronological search frames (Sec. 2.1-2.2).
-
-        Each search frame is jointly encoded with the template; the target state token q_t is
-        aggregated from the joint features of that frame. LTCP sees 0, 1 and 2 memory frames for
-        the three search frames, so the last one has the same two-frame context (m = 2) as
-        steady-state inference.
-        """
+        
         z_feat = self._z_feat(z_0, z_0_feat_mask)
         memory, outputs = [], []
         for search in (x_0, x_1, x_2):
@@ -94,13 +88,13 @@ class STCMTrack_DINOv2(nn.Module):
                 tokens = self.ltcp(raw_tokens, history, state_token)
                 memory.append(raw_tokens.detach() if self.ltcp_config.detach_memory else raw_tokens)
                 memory = memory[-self.ltcp_config.memory_size:]
-            outputs.append(self._predict(tokens))  # Eq. (3) goes directly to the heads.
+            outputs.append(self._predict(tokens))  
         return tuple(outputs)
 
     def _predict(self, tokens: torch.Tensor):
-        # LTCP cold start passes a strided slice of the joint sequence through, while streaming
-        # inference re-assembles a contiguous batch. Both paths feed the heads contiguous tokens so
-        # identical values give bit-identical float32 outputs (strided vs contiguous GEMM can differ by 1 ulp).
+        
+        
+        
         return self.head(tokens.contiguous())
 
     def _z_feat(self, z: torch.Tensor, z_feat_mask: torch.Tensor):
@@ -122,7 +116,7 @@ class STCMTrack_DINOv2(nn.Module):
         return joint[:, -x_feat.size(1):], joint[:, :1]
 
     def export_ltcp_state_dict(self):
-        """Explicit adapter export; state_dict() always contains the full model."""
+        
         if self.ltcp is None:
             raise ValueError('Cannot export LTCP from a base-only model')
         return OrderedDict((key, value) for key, value in self.state_dict().items()
@@ -131,12 +125,7 @@ class STCMTrack_DINOv2(nn.Module):
     _checkpoint_metadata_keys = ('_expert_alpha', '_use_rsexpert')
 
     def load_checkpoint_file(self, state_file, strict: bool = False):
-        """Load a full checkpoint or an authenticated original .bin release file.
-
-        The original release stores training increments, so its frozen DINOv2 weights
-        must have been loaded first. Its hashes identify the published pair; they do
-        not provide the training-snapshot provenance of newer exports.
-        """
+        
         from safetensors.torch import load_file
         state = load_file(str(state_file), device='cpu')
         if checkpoint_scaling_format(state) == 'modern':
@@ -163,8 +152,8 @@ class STCMTrack_DINOv2(nn.Module):
                                  f'unexpected={unexpected[:8]}')
             if not self._pretrained_backbone_loaded:
                 raise ValueError('Legacy base requires successfully loaded pretrained DINOv2 backbone weights')
-        # Fill only the known frozen parameters from the verified pretrained model.
-        # Validation above completes before the first tensor is copied.
+        
+        
         complete = self.state_dict()
         complete.update(canonical)
         result = super().load_state_dict(complete, strict=True)
@@ -194,11 +183,11 @@ class STCMTrack_DINOv2(nn.Module):
     def load_state_dict(self, state_dict: Mapping[str, Any], strict: bool = True, **kwargs):
         if checkpoint_scaling_format(state_dict) == 'legacy':
             raise ValueError('Legacy incremental weights must be authenticated with load_checkpoint_file')
-        # Top-level entries whose names start with an underscore are checkpoint metadata, not network weights;
-        # the TMoE scaling is the only metadata this model reads.
+        
+        
         state = OrderedDict((key, value) for key, value in state_dict.items()
                             if not key.startswith('_') or key in self._checkpoint_metadata_keys)
-        # Everything is validated before the first tensor is copied.
+        
         if any(key not in state for key in self._checkpoint_metadata_keys):
             raise ValueError('Not an STCMTrack checkpoint: the TMoE scaling entries (_expert_alpha, _use_rsexpert) '
                              'are missing. Use a checkpoint written by train_stcmtrack.sh or '

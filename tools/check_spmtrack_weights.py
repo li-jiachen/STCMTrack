@@ -25,7 +25,7 @@ REQUIRED_PREFIXES = ('head.', 'track_query', 'query_embed', 'token_type_embed')
 
 def validate_spmtrack_weights(path, *, allow_unmarked=False, expected_alpha=64.0, expected_rsexpert=False):
     path = Path(path)
-    # The numpy backend reads the index and a few scalars; it needs no torch and loads no weights.
+    
     with safe_open(str(path), framework='np') as f:
         keys = set(f.keys())
         foreign = sorted(k for k in keys if k in STCMTRACK_KEYS or k.startswith('ltcp.'))

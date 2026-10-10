@@ -84,7 +84,7 @@ class MatplotlibQt5Viewer(QObject):
             patches.Rectangle((bounding_box[0], bounding_box[1]), bounding_box[2], bounding_box[3], linewidth=linewidth,
                               linestyle=linestyle,
                               edgecolor=color, facecolor='none'))
-    # linestyle: ['solid'|'dashed'|'dashdot'|'dotted']
+    
     def drawBoundingBoxAndLabel(self, bounding_box, label, color=(1, 0, 0), linewidth=1, linestyle='solid'):
         self.drawBoundingBox(bounding_box, color, linewidth, linestyle)
         self.drawText(label, (bounding_box[0], bounding_box[1]), color, linestyle)

@@ -4,7 +4,7 @@ from trackit.miscellanies.machine.cpu_info import is_x86, is_arm, is_64bits, get
 
 
 _is_env_setup = False
-is_windows = sys.platform == 'win32'  # assuming using msvc on windows
+is_windows = sys.platform == 'win32'  
 
 
 def is_anaconda_dist():
@@ -132,7 +132,7 @@ def init_extra_build_flags(fast_math=False, lto=True, with_symbols=False, with_m
             nvcc_flags.extend(['-Xcompiler', cflag])
 
         if lto:
-            cflags.append('/GL')  # nvcc with LTCG will cause unexpected runtime behavior
+            cflags.append('/GL')  
         _extra_cflags = tuple(cflags)
 
         if with_machine_cuda_arch_flags:

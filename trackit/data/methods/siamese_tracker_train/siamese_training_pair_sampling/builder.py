@@ -11,7 +11,7 @@ def build_SiamFC_training_pair_sampler(datasets: Sequence[TrackingDataset], data
                                        sequence_picker: RandomAccessiblePerSequenceSampler,
                                        siamese_sampling_config: dict):
     print('Siamese training pair sampling:\n' + pretty_format(siamese_sampling_config))
-    # positive training pair sampling
+    
     positive_sample_config = siamese_sampling_config['positive_sample']
     siamese_sampling_method = SiamesePairSamplingMethod[positive_sample_config['sample_mode']]
     siamese_sampling_frame_range = positive_sample_config['max_gaps']
@@ -24,7 +24,7 @@ def build_SiamFC_training_pair_sampler(datasets: Sequence[TrackingDataset], data
     siamese_sampling_disable_frame_range_constraint_if_search_frame_not_found = positive_sample_config.get('disable_constraint_if_not_found', False)
     positive_sample_weight = positive_sample_config.get('weight', 1.0)
 
-    # negative training pair sampling
+    
     negative_sample_weight = 0
     negative_sample_methods = []
     negative_sample_methods_weight = None

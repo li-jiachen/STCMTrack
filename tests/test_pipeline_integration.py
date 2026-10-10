@@ -1,4 +1,4 @@
-"""Integration coverage: real preprocessing, loss, evaluation pipeline and YAML mixins."""
+
 import copy
 import contextlib
 import io
@@ -42,8 +42,8 @@ def config():
 
 class IntegrationTests(unittest.TestCase):
     def test_all_dataset_variant_configs(self):
-        # Table 2 rows 2-8 use STCMTrack. Row 1 uses the independent SPMTrack
-        # model and is covered by tests/test_spmtrack_static.py.
+        
+        
         variants = {'ltcp': ('ltcp',), 'mcc': ('ctr', 'ctr_no_rgtc'),
                     'rgtc': ('ctr', 'ctr_no_mcc'), 'ltcp_mcc': ('ltcp', 'ctr', 'ctr_no_rgtc'),
                     'ltcp_rgtc': ('ltcp', 'ctr', 'ctr_no_mcc'), 'mcc_rgtc': ('ctr',), 'full': ('ltcp', 'ctr')}

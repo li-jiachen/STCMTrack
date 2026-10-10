@@ -114,14 +114,14 @@ def build_default_application(config: dict, runtime_vars,
     else:
         name = runtime_vars.method_name + '-' + runtime_vars.config_name
 
-    # build model factory
+    
     model_manager = ModelManager(get_model_build_context(config))
 
     model_efficiency_assessor = _build_model_efficiency_assessor(config, runtime_vars, wandb_instance)
 
     num_epochs = config['run']['num_epochs']
 
-    # build checkpoint
+    
     checkpoint_dumper = None
     if runtime_vars.output_dir is not None:
         checkpoint_output_path = os.path.join(runtime_vars.output_dir, 'checkpoint')
@@ -129,7 +129,7 @@ def build_default_application(config: dict, runtime_vars,
             os.makedirs(checkpoint_output_path)
         checkpoint_dumper = build_checkpoint_dumper(config['run']['checkpoint'], checkpoint_output_path, num_epochs)
 
-    # build task description
+    
     context_manager = GlobalContextManager()
     tasks: Dict[str, ApplicationTaskDescription] = {}
     for task_name, task_config in config['run']['task'].items():
@@ -142,7 +142,7 @@ def build_default_application(config: dict, runtime_vars,
         tasks[task_name] = branch_task_desc
         logger.info(f'finish build task: {task_name}')
 
-    # build data
+    
     data_inputs: Dict[str, ApplicationDataContext] = {}
     data_host_pipelines: Dict[str, Sequence[HostDataPipeline]] = {}
     for data_name, data_config in config['run']['data'].items():
@@ -162,7 +162,7 @@ def build_default_application(config: dict, runtime_vars,
             data_host_pipelines[data_name] = data_pipeline.host
         logger.info(f'finish build data pipeline: {data_name}')
 
-    # build runner
+    
     runners: Dict[str, ApplicationRunnerContext] = {}
     for runner_name, runner_config in config['run']['runner'].items():
         logger.info(f'start build runner: {runner_name}')

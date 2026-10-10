@@ -1,5 +1,3 @@
-# Public implementation of the paper's two-stage STCMTrack training.
-# Settings omitted by the paper use the fixed defaults in this configuration.
 type: "default"
 
 num_epochs: 80
@@ -94,7 +92,7 @@ data:
     siamese_training_pair_sampling: &siamese_training_pair_sampling
       positive_sample:
         sample_mode: "first_frame_causal"
-        max_gaps: 200  # Read by the other sample modes only; first_frame_causal samples over the whole sequence.
+        max_gaps: 200
         num_template_frames: 1
         num_search_frames: 3
         MAX_SAMPLE_INTERVAL: 400

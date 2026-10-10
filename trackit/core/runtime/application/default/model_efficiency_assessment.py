@@ -49,7 +49,7 @@ def _run_model_flop_count_assessment(model_manager: ModelManager, device: torch.
     model_metrics = {}
     for path, flop_analysis in analyze_model_flops_for_all_paths(model_manager, device):
         print('Flop count table' + ('' if len(path) == 0 else f' ({path})') + ':\n' + flop_analysis.flop_table)
-        # print('Flop count by modules and operator' + ('' if len(path) == 0 else f' ({path})') + ':\n' + pprint.pformat(dict(flop_analysis.flops_by_module_and_operator)))
+        
         print('Flop count unsupported ops' + ('' if len(path) == 0 else f' ({path})') + ':\n' + pprint.pformat(dict(flop_analysis.unsupported_ops)))
         print('Total flop count' + ('' if len(path) == 0 else f' ({path})') + ': ', flop_analysis.total_flops)
         model_metrics[_get_metric_name('model_mac', path)] = flop_analysis.total_flops
@@ -88,10 +88,10 @@ def run_model_efficiency_assessment(model_manager: ModelManager, device: torch.d
     wandb_report.update(_run_model_number_of_parameters_assessment(model_manager, device))
 
     if model_manager.sample_input_data_generator is not None:
-        # model latency
+        
         wandb_report.update(_run_model_latency_assessment(model_manager, device, latency_test_enable_amp, latency_test_amp_dtype))
 
-        # model flops
+        
         try:
             wandb_report.update(_run_model_flop_count_assessment(model_manager, device))
         except NotImplementedError:

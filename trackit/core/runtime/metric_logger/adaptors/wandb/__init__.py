@@ -87,7 +87,7 @@ class WandbEpochSummaryLogger(MetricLoggerInterface):
 
     def log(self,
             metrics,
-            force,  # ignored
+            force,  
             step):
         if self.prefix is not None:
             metrics = {self.prefix + k: v for k, v in metrics.items()}

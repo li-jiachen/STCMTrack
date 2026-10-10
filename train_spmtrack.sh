@@ -1,14 +1,4 @@
 #!/usr/bin/env bash
-# Train the SPMTrack baseline (independent of STCMTrack; official structure of WenRuiCai/SPMTrack @ c581fe2).
-#
-#   DEVICE_IDS=0 ./train_spmtrack.sh                      # Anti-UAV410
-#   DATASET=antiuav300 DEVICE_IDS=0 ./train_spmtrack.sh   # Anti-UAV
-#
-# Single stage. Each sample has three templates (frames sampled with the upstream "interval" rule) and two
-# search frames; the query state is propagated from the first search frame to the second. The budget (80 epochs,
-# global batch 4, 2048 samples per epoch) is the stage-1 budget of Sec. 3.1, not upstream's 170 epochs / batch 128.
-# The result is a partial checkpoint (trainable parameters only) that carries `_spmtrack_port_version`.
-# Extra arguments are passed to boot.sh. Train each dataset separately; do not mix their weights.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

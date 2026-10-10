@@ -39,7 +39,7 @@ class GlobalContext:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        # cleanup_torch_distributed()
+        
         if self.wandb_instance is not None:
             self.wandb_instance.__exit__(exc_type, exc_val, exc_tb)
 

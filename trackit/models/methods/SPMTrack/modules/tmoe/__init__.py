@@ -71,7 +71,7 @@ class TMoELayer(nn.Module):
         else:
             raise ValueError(f'Unknown init method: {init_method}')
 
-        #nn.init.kaiming_uniform_(self.expert_route.weight, a=math.sqrt(5))
+        
 
     def forward(self, x: torch.Tensor):
         route_weight = self.expert_route(x).softmax(dim=-1)

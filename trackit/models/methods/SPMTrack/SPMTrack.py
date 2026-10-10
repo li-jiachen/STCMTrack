@@ -42,7 +42,7 @@ UPSTREAM_REPOSITORY = 'https://github.com/WenRuiCai/SPMTrack'
 UPSTREAM_COMMIT = 'c581fe27231f3e16c38578e47daddadfaf6ffd7d'
 SPMTRACK_PORT_VERSION = 1
 PORT_VERSION_KEY = '_spmtrack_port_version'
-# Entries that only STCMTrack checkpoints contain. They are never SPMTrack weights.
+
 _STCMTRACK_ONLY_KEYS = ('_expert_alpha', '_use_rsexpert')
 
 
@@ -80,7 +80,7 @@ class SPMTrack_DINOv2(nn.Module):
         self.query_embed = nn.Parameter(torch.empty(1, self.embed_dim))
         self.token_type_embed = nn.Parameter(torch.empty(3, self.embed_dim))
         trunc_normal_(self.token_type_embed, std=.02)
-        # Deviation 1: upstream leaves these two parameters uninitialized (torch.empty).
+        
         trunc_normal_(self.track_query, std=.02)
         trunc_normal_(self.query_embed, std=.02)
 
@@ -90,8 +90,8 @@ class SPMTrack_DINOv2(nn.Module):
 
         self.head = MlpAnchorFreeHead(self.embed_dim, self.x_size)
 
-        # Fixed once the network is complete: the checkpoint contains exactly these parameters
-        # (upstream filters by `requires_grad` at save time, which is fragile).
+        
+        
         self._trainable_parameter_names = frozenset(name for name, param in self.named_parameters() if param.requires_grad)
 
     def forward(self, z_0: torch.Tensor, z_1: torch.Tensor, z_2: torch.Tensor,
@@ -149,9 +149,9 @@ class SPMTrack_DINOv2(nn.Module):
 
         return output1, output2
 
-    # ------------------------------------------------------------------ checkpoints
+    
     def state_dict(self, *, destination=None, prefix='', keep_vars=False):
-        """Upstream-compatible partial checkpoint: trainable parameters only, plus TMoE scaling metadata."""
+        
         state_dict = super().state_dict(destination=destination, prefix=prefix, keep_vars=keep_vars)
         for name, _ in self.named_parameters():
             if name not in self._trainable_parameter_names:
@@ -162,8 +162,8 @@ class SPMTrack_DINOv2(nn.Module):
         return state_dict
 
     def load_state_dict(self, state_dict: Mapping[str, Any], strict: bool = True, assign: bool = False):
-        # Everything is validated before the first tensor is copied, so a rejected checkpoint
-        # leaves the model untouched (ModelManager only reports unexpected keys after copying).
+        
+        
         state_dict = OrderedDict(state_dict)
         self._check_checkpoint_provenance(state_dict)
         expert_alpha = state_dict.pop('expert_alpha', None)

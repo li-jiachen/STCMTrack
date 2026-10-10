@@ -1,26 +1,4 @@
-"""SPMTrack baseline: streaming inference model.
 
-Corresponds to `SPMTrackBaseline_DINOv2` in the official
-trackit/models/methods/SPMTrack/SPMTrack_full_finetune.py @ c581fe27231f3e16c38578e47daddadfaf6ffd7d
-(WenRuiCai/SPMTrack, Apache-2.0): `forward_tracking` with a per-sequence query state.
-
-The query used for a frame is  state(previous frame) + track_query + query_embed,  and for the
-first tracked frame the state is zero. This matches the second search frame of the training
-forward (`query_2 = track_query + new_query + query_embed`). The new state is the detached
-query output of the joint encoder and is stored after every frame.
-
-Deviations from the pinned commit (engineering only):
-  * This class inherits the training model, so TMoE is built in the constructor. Upstream
-    applies TMoE inside `load_state_dict`, which wraps the layers a second time whenever the
-    cached inference model is refreshed from the training model.
-  * The three template inputs and masks are required. Upstream silently substitutes copies of
-    earlier templates when they are missing (and its source carries a "has a bug" comment).
-  * The query state is a plain dictionary created in `init_eval`, cleared per sequence by
-    `reset_tracking` / `forget_tracking` (called by the evaluator), and released in `end_eval`.
-    Upstream pre-fills `range(total_sequence_num)` and never drops finished sequences.
-  * `dinov2_full_finetune` is not supported: the upstream builder cannot construct it (it
-    omits the TMoE constructor arguments of that class).
-"""
 from typing import Dict, List, Optional
 
 import torch
@@ -40,7 +18,7 @@ class SPMTrackInference_DINOv2(SPMTrack_DINOv2):
         self.track_query_dicts = {}
 
     def reset_tracking(self, task_id):
-        """A (re-)initialized sequence starts with a zero query state."""
+        
         self.track_query_dicts.pop(task_id, None)
 
     def forget_tracking(self, task_id):

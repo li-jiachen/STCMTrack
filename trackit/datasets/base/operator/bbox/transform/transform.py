@@ -124,17 +124,17 @@ def bbox_transform(bbox, source_format: BoundingBoxFormat, target_format: Boundi
                    source_bounding_box_coordinate_system: BoundingBoxCoordinateSystem,
                    target_bounding_box_coordinate_system: BoundingBoxCoordinateSystem):
     if source_bounding_box_coordinate_system == BoundingBoxCoordinateSystem.Discrete and target_bounding_box_coordinate_system == BoundingBoxCoordinateSystem.Discrete:
-        # do in integer space
+        
         return bbox_coord_discrete_transform(bbox, source_format, target_format)
     else:
-        # do in float space
+        
         if source_format == BoundingBoxFormat.Polygon or target_format == BoundingBoxFormat.Polygon:
-            # do in polygon routine
+            
             bbox = bbox_to_polygon(bbox, source_format, source_bounding_box_coordinate_system)
             bbox = bbox_polygon_transform(bbox, source_bounding_box_coordinate_system, target_bounding_box_coordinate_system)
             return bbox_polygon_to_any(bbox, target_format, target_bounding_box_coordinate_system)
         else:
-            # do in xyxy routine
+            
             bbox = bbox_to_xyxy(bbox, source_format, source_bounding_box_coordinate_system)
             bbox = bbox_xyxy_transform(bbox, source_bounding_box_coordinate_system, target_bounding_box_coordinate_system)
             return bbox_xyxy_to_any(bbox, target_format, target_bounding_box_coordinate_system)

@@ -38,8 +38,8 @@ def get_aux_backend() -> Optional[dist.Backend]:
     return dist.get_backend(_group_aux)
 
 
-# may return None
-#  None -> use main process group
+
+
 def get_aux_process_group() -> Optional[dist.ProcessGroup]:
     return _group_aux
 
@@ -98,7 +98,7 @@ def init_torch_distributed(device: str, silent_non_local_master: bool = True, us
     local_world_size = int(os.environ['LOCAL_WORLD_SIZE'])
 
     if device == 'cuda':
-        torch.cuda.set_device(local_rank)  # important
+        torch.cuda.set_device(local_rank)  
         dist_backend = 'nccl'
     else:
         dist_backend = 'gloo'
@@ -107,7 +107,7 @@ def init_torch_distributed(device: str, silent_non_local_master: bool = True, us
     dist.init_process_group(backend=dist_backend, init_method='env://', world_size=world_size, rank=rank)
     _log_info('torch.distributed initialized', dist_backend, rank, world_size, local_rank, local_world_size)
 
-    # dist.barrier()
+    
 
     if dist_backend == 'nccl' and use_aux_process_group:
         global _group_aux

@@ -1,15 +1,5 @@
 #!/usr/bin/env python3
-"""Convert the infrared videos of Anti-UAV (`antiuav300` in the scripts) to the layout used by STCMTrack.
 
-Output layout (identical to Anti-UAV410, so the same loader and metric script apply):
-
-    <output-root>/<split>/<sequence>/000001.jpg, 000002.jpg, ...
-    <output-root>/<split>/<sequence>/IR_label.json   # {"exist": [...], "gt_rect": [[x, y, w, h], ...]}
-
-Each source sequence directory is expected to contain one infrared annotation file
-(``infrared.json`` or ``IR_label.json``) and either an infrared video
-(``infrared.mp4`` or ``IR.mp4``) or already extracted frames. Absent-target frames are written as ``[0, 0, 0, 0]`` with ``exist = 0``; the metric script skips them.
-"""
 from __future__ import annotations
 
 import argparse

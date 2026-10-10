@@ -5,7 +5,7 @@ from ._types import SiamesePairSamplingMethod
 import random
 
 class NoCausalClipError(ValueError):
-    """The track cannot provide the first template plus a contiguous search clip."""
+    pass
 
 
 def sample_first_frame_causal(length, mask, num_template_frames, num_search_frames, rng_engine):
@@ -14,7 +14,7 @@ def sample_first_frame_causal(length, mask, num_template_frames, num_search_fram
     visible = np.ones(length, dtype=bool) if mask is None else np.asarray(mask, dtype=bool)
     if visible.shape != (length,) or length < 4 or not visible[0]:
         raise NoCausalClipError('Frame zero must be visible and at least four frames are required')
-    # Do not delete absent frames and then treat separated frames as adjacent.
+    
     contiguous = np.convolve(visible.astype(np.int32), np.ones(3, dtype=np.int32), mode='valid') == 3
     starts = np.flatnonzero(contiguous)
     starts = starts[starts > 0]
@@ -146,23 +146,7 @@ def _do_siamfc_pair_sampling(length: int, frame_range: Optional[int], mask: np.n
                              num_template_frames: int = 1,
                              num_search_frames: int = 1,
                              max_sample_interval: int = 1):
-    '''
-    :param length: length of the sequence
-    :param frame_range:
-         when sampling_method == causal:
-            z_index ---------------> x_index
-                    max frame_range
-         when sampling_method == interval:
-            x_index <-------------- z_index --------------> x_index
-                    max frame_range         max frame_range
-    :param mask: validity mask
-    :param sampling_method: causal or interval
-    :param rng_engine: random number generator (numpy)
-    :return:
-        Union(Tuple(int, int), int)
-            Tuple(int, int): (z_index, x_index), when a match search frame is found
-            int: z_index, when no match search frame is found
-    '''
+    
     if sampling_method == SiamesePairSamplingMethod.first_frame_causal:
         return sample_first_frame_causal(length, mask, num_template_frames, num_search_frames, rng_engine)
     assert frame_range is None or frame_range > 0
@@ -172,7 +156,7 @@ def _do_siamfc_pair_sampling(length: int, frame_range: Optional[int], mask: np.n
         if length == 1:
             return [base_z_index]*num_template_frames, [base_z_index]*num_search_frames
 
-        z_candidate_indices, _ = _get_search_frame_candidates(base_z_index, length, frame_range, mask, sampling_method)  # candidates for the remaining templates
+        z_candidate_indices, _ = _get_search_frame_candidates(base_z_index, length, frame_range, mask, sampling_method)  
 
         if z_candidate_indices is None:
             print("z_candidate_indices is None! Try again.")
@@ -187,7 +171,7 @@ def _do_siamfc_pair_sampling(length: int, frame_range: Optional[int], mask: np.n
         z_indexes = list(z_indexes) + [base_z_index]
         z_indexes.sort(reverse=False)
 
-        # templates sampled
+        
 
         left_candidate_indices, _ = _get_search_frame_candidates(z_indexes[0], length, max_sample_interval, mask, sampling_method)
         left_candidate_indices = left_candidate_indices[left_candidate_indices < z_indexes[0]]
@@ -205,7 +189,7 @@ def _do_siamfc_pair_sampling(length: int, frame_range: Optional[int], mask: np.n
         elif len(right_candidate_indices) < num_search_frames:
             x_indexes = list(rng_engine.choice(left_candidate_indices, size=num_search_frames))
         else:
-            # both sides available: pick one at random
+            
             if random.random() < 0.5:
                 x_indexes = list(rng_engine.choice(left_candidate_indices, size=num_search_frames))
             else:
@@ -263,7 +247,7 @@ def get_random_negative_siamese_training_pair_from_track(
     assert track_length > 0
     if track_length == 1:
         frame_indices = (0,)
-        assert track[0].get_existence_flag() is None or track[0].get_existence_flag()  # z must exist
+        assert track[0].get_existence_flag() is None or track[0].get_existence_flag()  
     else:
         frame_indices = _do_negative_siamfc_pair_sampling(len(track), frame_range, track.get_all_object_existence_flag(), rng_engine)
     return frame_indices

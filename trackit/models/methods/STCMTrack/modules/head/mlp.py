@@ -7,7 +7,7 @@ from trackit.core.utils.anchor_free_reference_points import get_anchor_free_refe
 
 
 class Mlp(nn.Module):
-    """ Multilayer perceptron."""
+    
 
     def __init__(self, in_features, hidden_features=None, out_features=None,
                  num_layers=2,
@@ -37,8 +37,8 @@ class Mlp(nn.Module):
 class MlpAnchorFreeHead(nn.Module):
     def __init__(self, dim: int, map_size: Tuple[int, int]):
         super(MlpAnchorFreeHead, self).__init__()
-        self.cls_mlp = Mlp(dim, out_features=1, num_layers=3)  # center head: target-center response map
-        self.reg_mlp = Mlp(dim, out_features=4, num_layers=3)  # box head
+        self.cls_mlp = Mlp(dim, out_features=1, num_layers=3)  
+        self.reg_mlp = Mlp(dim, out_features=4, num_layers=3)  
         self.map_size = map_size
         self.register_buffer('bbox_offset', get_anchor_free_reference_points(map_size), persistent=False)
         self.reset_parameters()
@@ -55,15 +55,7 @@ class MlpAnchorFreeHead(nn.Module):
         self.apply(_init_weights)
 
     def forward(self, x):
-        '''
-            Args:
-                x (torch.Tensor): (B, H * W, C) input feature map
-            Returns:
-                Dict: {
-                    'score_map' (torch.Tensor): (B, 1, H, W)
-                    'boxes' (torch.Tensor): (B, H, W, 4)
-                }
-        '''
+        
         W, H = self.map_size
         bbox_offset = self.bbox_offset
 

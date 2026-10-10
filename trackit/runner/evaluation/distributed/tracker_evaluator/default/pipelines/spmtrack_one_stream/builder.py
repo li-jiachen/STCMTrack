@@ -31,7 +31,7 @@ def build_spmtrack_one_stream_tracker_pipeline(pipeline_config: dict, config: di
         online_template_config.get('area_factor', 2.0))
 
     from .template_mask import SPMTrackTemplateFeatForegroundMaskGeneration
-    # The mask pipeline must come after the main pipeline (it consumes its temporary objects).
+    
     return [main_pipeline,
             SPMTrackTemplateFeatForegroundMaskGeneration(common_config['template_size'],
                                                          common_config['template_feat_size'], device)]

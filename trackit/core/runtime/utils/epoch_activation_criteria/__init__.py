@@ -7,9 +7,7 @@ class EpochActivationCriterion:
 
 
 class FixedEpochActivation(EpochActivationCriterion):
-    """
-    Activates on specified epochs.
-    """
+    
     def __init__(self, allowed_epochs):
         self.allowed_epochs = allowed_epochs
 
@@ -21,9 +19,7 @@ class FixedEpochActivation(EpochActivationCriterion):
 
 
 class UnrestrictedEpochActivation(EpochActivationCriterion):
-    """
-    Activates at all epochs up to a specified limit.
-    """
+    
     def __init__(self, max_epochs: int):
         if not isinstance(max_epochs, int) or max_epochs <= 0:
             raise ValueError("max_epochs must be a positive integer.")

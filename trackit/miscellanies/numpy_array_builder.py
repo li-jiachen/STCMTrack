@@ -69,11 +69,11 @@ class NumpyArrayBuilder:
         return selector
 
     def __getitem__(self, key: Union[int, slice, tuple]) -> np.ndarray:
-        # key = self._update_selector(key)
+        
         return self.data[: self.size].__getitem__(key)
 
     def __setitem__(self, key: Union[int, slice, tuple], value: Union[float, np.ndarray]):
-        # key = self._update_selector(key)
+        
         self.data[: self.size].__setitem__(key, value)
 
     def __len__(self) -> int:

@@ -30,8 +30,8 @@ SCRIPT = ROOT / 'test_stcmtrack.sh'
 TRAIN_SCRIPT = ROOT / 'train_stcmtrack.sh'
 CONFIG_ROOT = ROOT / 'config'
 CONFIG_NAME = 'dinov2'
-# Table 2 row 1 is the independent SPMTrack baseline; rows 2-8 are STCMTrack configurations.
-# The mapping does not infer that the published scores were produced by the current code.
+
+
 COMPONENTS = {
     'baseline': (False, False, False), 'ltcp': (True, False, False), 'mcc': (False, True, False),
     'rgtc': (False, False, True), 'ltcp_mcc': (True, True, False), 'ltcp_rgtc': (True, False, True),
@@ -40,13 +40,13 @@ COMPONENTS = {
 STCM_VARIANTS = tuple(name for name in COMPONENTS if name != 'baseline')
 
 
-# ----------------------------------------------------------------------------- shell
+
 def parse_case_block(text, variable):
     match = re.search(r'case "\$' + variable + r'" in\n(.*?)\nesac', text, re.S)
     if not match:
         raise ValueError(f'case "${variable}" block not found in {SCRIPT.name}')
     entries = {}
-    # A branch may span several lines (DATASET) or sit on one line (VARIANT); `*)` defaults are skipped.
+    
     for m in re.finditer(r'^[ \t]*([A-Za-z0-9_]+(?:\|[A-Za-z0-9_]+)*)\)(.*?);;', match.group(1), re.S | re.M):
         entries[tuple(m.group(1).split('|'))] = m.group(2).strip()
     return entries
@@ -73,7 +73,7 @@ def parse_variants(text):
     return variants, dataset_mixins
 
 
-# ----------------------------------------------------------------------------- config
+
 def mixin_path(method, name):
     for candidate in (CONFIG_ROOT / method / CONFIG_NAME / 'mixin' / f'{name}.yaml',
                       CONFIG_ROOT / method / '_mixin' / f'{name}.yaml',
@@ -120,7 +120,7 @@ def config_facts(config):
 
 
 def augmentation_target_problems(config):
-    """A shared augmentation must cover every input of its model, even when counts differ."""
+    
     found = []
     for task in ('train', 'val'):
         data = config['run']['data'][task]
@@ -135,7 +135,7 @@ def augmentation_target_problems(config):
 
 
 def training_data_settings(config):
-    """Compare external training conditions without equating the models' temporal inputs."""
+    
     settings = {}
     for task in ('train', 'val'):
         data = copy.deepcopy(config['run']['data'][task])
@@ -143,7 +143,7 @@ def training_data_settings(config):
         transform = data['transform']
         transform.setdefault('temporal_consistent_crops', False)
         for augmentation in transform.get('augmentation', []):
-            # Targets are checked against each model's actual input counts separately.
+            
             augmentation.pop('target', None)
             augmentation.setdefault('joint', True)
         settings[task] = data
@@ -151,7 +151,7 @@ def training_data_settings(config):
 
 
 def evaluation_settings(config):
-    """Shared crop, data and engine settings; pipeline/post-process classes stay independent."""
+    
     test = config['run']['runner']['test']
     pipeline = test['evaluator']['pipeline']
     cropping = copy.deepcopy(pipeline['search_region_cropping'])
@@ -163,7 +163,7 @@ def evaluation_settings(config):
         if task not in config['run']['data']:
             continue
         data = copy.deepcopy(config['run']['data'][task])
-        # Full-frame inputs are needed by MCC/RGTC, rather than an evaluation protocol difference.
+        
         data['transform'].pop('with_full_template_image', None)
         data_settings[task] = data
     return {'data': data_settings, 'inference_engine': copy.deepcopy(test['inference_engine']),
@@ -172,11 +172,7 @@ def evaluation_settings(config):
 
 
 def paper_settings(config):
-    """Shared public settings, including defaults not specified by the paper.
-
-    The historical name is retained for consumers of the mapping JSON. Only the
-    subset checked by explicit_paper_setting_problems is asserted as Sec. 3.1.
-    """
+    
     optimization = config['run']['runner']['train']['optimization']
     criteria = copy.deepcopy(config['run']['runner']['train']['criteria'])
     criteria.setdefault('frame_loss_reduction', 'mean')
@@ -204,11 +200,7 @@ def paper_settings(config):
 
 
 def shared_config(config):
-    """Keep every setting except the named components and their necessary full-frame input.
-
-    Component parameters are checked separately, so removing their dictionaries here does not
-    permit changes to their thresholds or memory settings between ablation rows.
-    """
+    
     common = copy.deepcopy(config)
     common.pop('name', None)
     common.pop('logging', None)
@@ -237,11 +229,7 @@ def settings_facts(config):
 
 
 def parse_training_stages(text):
-    """Read the supported training entry point without executing conda or CUDA.
-
-    Unknown shell layouts fail closed so a changed mixin branch cannot silently
-    be checked against hard-coded stage assumptions.
-    """
+    
     stage = re.search(r'^if \[\[ "\$TRAIN_STAGE" == 1 \]\]; then\n(.*?)\nelse\n(.*?)\nfi', text, re.S | re.M)
     initial = re.search(r'^mixin_names=\(([^\n]*)\)$', text, re.M)
     method = re.search(r'^"\$REPO_ROOT/boot\.sh" (\w+) (\w+) ', text, re.M)
@@ -294,7 +282,7 @@ def compute_training(dataset='antiuav410', text=None):
 
 
 def explicit_paper_setting_problems(settings, epochs=80):
-    """Check what Sec. 3.1 actually specifies, excluding label and scheduler defaults."""
+    
     optimizer, criteria = settings['optimizer'], settings['criteria']
     expected = (
         settings['backbone']['type'] == 'DINOv2',
@@ -312,7 +300,7 @@ def explicit_paper_setting_problems(settings, epochs=80):
 
 
 def training_problems(stages):
-    """This 80+20 contract belongs to STCMTrack, not the independent SPMTrack baseline."""
+    
     found = []
     stage1, stage2 = stages[1], stages[2]
     if stage1['epochs'] != 80 or stage1['ltcp_enabled'] or stage1['train_only']:
@@ -329,7 +317,7 @@ def training_problems(stages):
     return found
 
 
-# ----------------------------------------------------------------------------- AST
+
 def module_file(module):
     base = ROOT.joinpath(*module.split('.'))
     if base.with_suffix('.py').is_file():
@@ -377,7 +365,7 @@ def import_closure(start_file):
             continue
         seen.add(module)
         parts = module.split('.')
-        for i in range(1, len(parts)):  # importing a.b.c executes a/__init__ and a/b/__init__
+        for i in range(1, len(parts)):  
             queue.append('.'.join(parts[:i]))
         file = module_file(module)
         if file is not None:
@@ -386,7 +374,7 @@ def import_closure(start_file):
 
 
 def dispatch_table(path, subject):
-    """`if X['type'] == 'name': from .pkg.builder import fn` -> {name: 'absolute.module'}."""
+    
     table = {}
     for node in ast.walk(ast.parse(path.read_text(encoding='utf-8'))):
         if isinstance(node, ast.If) and isinstance(node.test, ast.Compare) and len(node.test.comparators) == 1 \
@@ -401,7 +389,7 @@ def dispatch_table(path, subject):
 
 
 def returned_classes(builder_file, package):
-    """Classes of `package` that the builder instantiates (imported names that are called)."""
+    
     tree = ast.parse(builder_file.read_text(encoding='utf-8'))
     imported = {}
     for node in ast.walk(tree):
@@ -438,7 +426,7 @@ def code_reach(closure):
 
 
 def source_structure_sha256(path):
-    """Ignore comments and documentation when comparing the shared prediction-head implementation."""
+    
     tree = ast.parse(path.read_text(encoding='utf-8'))
     for node in ast.walk(tree):
         if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)) \
@@ -486,7 +474,7 @@ def resolve_pipeline(pipeline_type):
             'reach': code_reach(import_closure(builder_file))}
 
 
-# ----------------------------------------------------------------------------- mapping
+
 def compute(dataset='antiuav410'):
     text = SCRIPT.read_text(encoding='utf-8')
     variants, dataset_mixins = parse_variants(text)
@@ -588,7 +576,7 @@ def problems(rows):
 
 
 def ablation_conflicts(rows):
-    """Report the original SPMTrack differences, not silently relabel them as component switches."""
+    
     if 'baseline' not in rows or 'ltcp' not in rows:
         return []
     baseline, stcm = rows['baseline'], rows['ltcp']

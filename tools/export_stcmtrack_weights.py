@@ -30,7 +30,7 @@ def export_weights(checkpoint, base_output, ltcp_output=None):
         raise ValueError('Input, output, and manifest paths must be distinct')
     if any(p.exists() for p in outputs) or base_output.with_suffix('.manifest.json').exists():
         raise FileExistsError('An output already exists; choose new output paths')
-    # Top-level entries whose names start with an underscore are metadata; the TMoE scaling is the only one exported.
+    
     state = {k: v for k, v in load_file(str(checkpoint), device='cpu').items()
              if not k.startswith('_') or k in METADATA_KEYS}
     required = {*METADATA_KEYS, 'patch_embed.proj.weight', 'pos_embed', 'track_query', 'query_embed',

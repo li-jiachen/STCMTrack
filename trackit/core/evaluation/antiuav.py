@@ -1,18 +1,4 @@
-"""Evaluation metrics (Sec. 3.2 of the paper), shared by the runner and the exported-result evaluator.
 
-AUC is the area under the success curve over IoU thresholds in [0, 1]; P@20 is the fraction of frames whose center
-error is below 20 pixels; P_n is the fraction of frames whose center error, normalized by the ground-truth box
-diagonal sqrt(w_gt**2 + h_gt**2), is below 0.5. Both precision thresholds are strict (`<`). This module is the only
-place where the metrics are computed: the two internal one-pass-evaluation handlers,
-tools/evaluate_antiuav_iou_p20.py and the SPMTrack baseline (which uses the same handlers) all call
-`evaluate_sequence` / `frame_errors`.
-
-Boxes use continuous XYWH coordinates (top-left corner, width, height); the internal XYXY boxes are converted before
-the call. AUC is the exact integral of the empirical success curve on [0, 1], which equals the mean IoU; the 101
-sampled thresholds are only used for plotting.
-Protocol conventions: frames in which the target is absent are excluded from all metrics, the initialization frame
-is included, and the reported numbers are unweighted means over sequences. They are recorded in every report.
-"""
 from dataclasses import dataclass
 import numpy as np
 

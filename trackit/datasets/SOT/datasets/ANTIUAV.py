@@ -4,7 +4,7 @@ from ._antiuav_layout import construct_antiuav_layout_dataset, antiuav_cache_ide
 
 
 class ANTIUAV_Seed(BaseSeed):
-    """Anti-UAV410 test split (path constant ``ANTIUAV410_PATH`` in consts.yaml)."""
+    
 
     def __init__(self, root_path: str = None, data_split='test'):
         if root_path is None:

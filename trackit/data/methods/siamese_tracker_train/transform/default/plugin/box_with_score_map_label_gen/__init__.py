@@ -7,13 +7,7 @@ from trackit.core.operator.numpy.bbox.rasterize import bbox_rasterize
 
 
 def positive_sample_assignment(bbox: np.ndarray, response_map_size: np.ndarray, search_region_size: np.ndarray):
-    '''
-
-    :param bbox: (4,), in (xyxy) format
-    :param response_map_size: (2,), response map size
-    :param search_region_size: (2,), input search region size
-    :return:
-    '''
+    
     scale = response_map_size / search_region_size
     indices = np.arange(0, response_map_size[0] * response_map_size[1], dtype=np.int64)
     indices = indices.reshape(response_map_size[1], response_map_size[0])

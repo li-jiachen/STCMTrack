@@ -38,7 +38,7 @@ def main(runtime_vars):
         return spawn_workers(runtime_vars)
 
     numpy_no_multithreading()
-    # opencv_no_multithreading()
+    
     if runtime_vars.enable_stack_trace_on_error:
         enable_stack_trace_on_error()
     _remove_ddp_parameter(runtime_vars)

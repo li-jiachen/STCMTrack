@@ -301,7 +301,7 @@ class _BaseDatasetConstructor:
 
     def set_bounding_box_coordinate_system(self, bounding_box_coordinate_system: Union[BoundingBoxCoordinateSystem, str]):
         if isinstance(bounding_box_coordinate_system, str):
-            bounding_box_coordinate_system = BoundingBoxCoordinateSystem[bounding_box_coordinate_system]  # convert string to enum
+            bounding_box_coordinate_system = BoundingBoxCoordinateSystem[bounding_box_coordinate_system]  
         self.context.set_bounding_box_coordinate_system(bounding_box_coordinate_system)
 
 

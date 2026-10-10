@@ -7,10 +7,9 @@ import code, traceback, signal
 
 # https://stackoverflow.com/questions/132058/showing-the-stack-trace-from-a-running-python-application
 def debug(sig, frame):
-    """Interrupt running process, and provide a python prompt for
-    interactive debugging."""
-    d={'_frame':frame}         # Allow access to frame object.
-    d.update(frame.f_globals)  # Unless shadowed by global
+    
+    d={'_frame':frame}         
+    d.update(frame.f_globals)  
     d.update(frame.f_locals)
 
     i = code.InteractiveConsole(d)
@@ -20,8 +19,8 @@ def debug(sig, frame):
 
 
 def register_sig_handler():
-    signal.signal(signal.SIGUSR1, debug)  # Register handler
-    # print stack trace on SIGTERM
+    signal.signal(signal.SIGUSR1, debug)  
+    
     signal.signal(signal.SIGTERM, lambda sig, frame: traceback.print_stack(frame))
 
 

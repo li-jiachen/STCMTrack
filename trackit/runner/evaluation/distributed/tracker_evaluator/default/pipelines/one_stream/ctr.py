@@ -1,22 +1,4 @@
-"""Confidence-Triggered Re-localization (CTR), Sec. 2.3 of the paper.
 
-CTR has two branches that share one homography ``T_t`` per frame:
-
-* Motion Center Correction (MCC), applied before inference. ORB keypoints of
-  the adjacent frames are matched with the Hamming distance, RANSAC estimates
-  ``T_t``, and the previous target center is mapped to ``T_t(o_{t-1})``.
-  Together with the previous target size this gives ``B_t^geo``, which
-  defines the center and scale of the corrected search crop ``S_t^corr``.
-* Residual-Guided Target Correction (RGTC), applied after inference when the
-  tracker confidence ``s_t`` is below ``tau``. The previous frame is aligned
-  to the current frame with the same ``T_t``, the absolute residual is
-  thresholded adaptively (Eqs. 4-6), the residual mask is merged with the
-  MOG2 foreground mask, and the candidate that is most consistent with the
-  motion-corrected center becomes ``B_t^corr``.
-
-The homography is estimated whenever either branch is enabled, so RGTC keeps
-its alignment and motion prior when MCC is switched off in the ablation.
-"""
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
@@ -35,23 +17,23 @@ from trackit.core.operator.numpy.bbox.validity import bbox_is_valid
 @dataclass
 class CTRConfig:
     enabled: bool = False
-    # Branches.
-    mcc_enabled: bool = True  # Motion Center Correction: re-center the search crop on B_t^geo.
-    rgtc_enabled: bool = True  # Residual-Guided Target Correction of low-confidence predictions.
-    confidence_threshold: float = 0.40  # tau: predictions with s_t >= tau are accepted directly.
-    # Homography estimation shared by MCC and RGTC.
+    
+    mcc_enabled: bool = True  
+    rgtc_enabled: bool = True  
+    confidence_threshold: float = 0.40  
+    
     orb_features: int = 800
-    max_matches: int = 80  # best cross-checked Hamming matches passed to RANSAC
-    min_matches: int = 8  # minimum number of matches and of RANSAC inliers
+    max_matches: int = 80  
+    min_matches: int = 8  
     min_inlier_ratio: float = 0.25
-    ransac_reproj_threshold: float = 2.0  # pixels
-    max_center_shift_ratio: float = 1.0  # max |T_t(o_{t-1}) - o_{t-1}| as a fraction of the image diagonal
-    # RGTC foreground evidence: M_t = M_t^mog2 U M_t^res.
-    residual_mad_scale: float = 4.4478  # alpha in Eq. (5)
+    ransac_reproj_threshold: float = 2.0  
+    max_center_shift_ratio: float = 1.0  
+    
+    residual_mad_scale: float = 4.4478  
     mog2_history: int = 80
     mog2_var_threshold: float = 24.0
-    mog2_detect_shadows: bool = True  # shadow pixels are excluded from the foreground mask
-    # Candidate area constraints relative to the previous target area A_{t-1}.
+    mog2_detect_shadows: bool = True  
+    
     min_candidate_area: float = 4.0
     min_candidate_area_ratio: float = 0.05
     max_candidate_area_ratio: float = 25.0
@@ -71,8 +53,8 @@ class _TrackState:
     previous_gray: Optional[np.ndarray]
     previous_bbox: Optional[np.ndarray]
     mog2: cv2.BackgroundSubtractorMOG2
-    geometric_bbox: Optional[np.ndarray] = None  # B_t^geo of the current frame
-    homography: Optional[np.ndarray] = None  # T_t of the current frame
+    geometric_bbox: Optional[np.ndarray] = None  
+    homography: Optional[np.ndarray] = None  
     mog2_updated: bool = False
 
 
@@ -111,7 +93,7 @@ class ConfidenceTriggeredRelocalization:
         self._matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
         self._stats = _CTRStats()
 
-    # ------------------------------------------------------------------ state
+    
     def reset_statistics(self):
         self._stats = _CTRStats()
 
@@ -133,7 +115,7 @@ class ConfidenceTriggeredRelocalization:
         self._states.clear()
 
     def update(self, task_id: int, image: torch.Tensor, bbox: np.ndarray, image_size: np.ndarray):
-        """Store the final box B_t and the current frame for the next time step."""
+        
         state = self._states.get(task_id)
         if state is None:
             self.reset(task_id, image, bbox)
@@ -150,9 +132,9 @@ class ConfidenceTriggeredRelocalization:
         state.geometric_bbox = None
         state.homography = None
 
-    # -------------------------------------------------------------------- MCC
+    
     def compensate_search_bbox(self, task_id: int, image: torch.Tensor, image_size: np.ndarray) -> Optional[np.ndarray]:
-        """Estimate T_t and B_t^geo. Returns B_t^geo for re-centering the search crop when MCC is enabled."""
+        
         self._stats.frames += 1
         state = self._states.get(task_id)
         if state is None or state.previous_gray is None or state.previous_bbox is None:
@@ -166,7 +148,7 @@ class ConfidenceTriggeredRelocalization:
         homography = self._estimate_homography(state.previous_gray, current_gray)
         if homography is None:
             return None
-        # RGTC can still use a valid homography when the MCC center check fails.
+        
         state.homography = homography.copy()
         self._stats.homography_successes += 1
         geometric_bbox = self._map_previous_box(homography, state.previous_bbox, image_size)
@@ -210,7 +192,7 @@ class ConfidenceTriggeredRelocalization:
 
     def _map_previous_box(self, homography: np.ndarray, previous_bbox: np.ndarray,
                           image_size: np.ndarray) -> Optional[np.ndarray]:
-        """B_t^geo = (T_t(o_{t-1}), w_{t-1}, h_{t-1})."""
+        
         if homography is None or not np.all(np.isfinite(homography)):
             return None
         previous_center = bbox_get_center_point(previous_bbox)
@@ -236,10 +218,10 @@ class ConfidenceTriggeredRelocalization:
             return None
         return geometric_bbox
 
-    # ------------------------------------------------------------------- RGTC
+    
     def correct_prediction(self, task_id: int, image: torch.Tensor, predicted_bbox: np.ndarray,
                            predicted_score: float, image_size: np.ndarray) -> Tuple[np.ndarray, bool]:
-        """Return (B_t, corrected). B_t = B_t^tracker if s_t >= tau, otherwise the RGTC candidate if one is found."""
+        
         self._observe_confidence(predicted_score)
         state = self._states.get(task_id)
         if state is None or not self.config.rgtc_enabled:
@@ -248,7 +230,7 @@ class ConfidenceTriggeredRelocalization:
             return predicted_bbox, False
 
         self._stats.low_confidence_frames += 1
-        # Motion prior: the motion-corrected center when T_t is available, otherwise the tracker prediction.
+        
         reference_bbox = state.geometric_bbox if state.geometric_bbox is not None else predicted_bbox
         foreground_mask = self._foreground_mask(state, _to_gray_uint8(image))
         candidates = self._extract_candidates(foreground_mask, state.previous_bbox, image_size)
@@ -268,7 +250,7 @@ class ConfidenceTriggeredRelocalization:
         residual_mask = self._residual_mask(state, gray)
         if residual_mask is not None:
             self._stats.residual_masks += 1
-        # Sec. 2.3: M_t = M_t^mog2 U M_t^res.
+        
         mog2_mask = self._mog2_mask(state, gray)
         if residual_mask is None:
             return mog2_mask
@@ -277,11 +259,11 @@ class ConfidenceTriggeredRelocalization:
     def _mog2_mask(self, state: _TrackState, gray: np.ndarray) -> np.ndarray:
         foreground_mask = state.mog2.apply(gray)
         state.mog2_updated = True
-        foreground_mask = (foreground_mask == 255).astype(np.uint8) * 255  # drop shadow pixels (value 127)
+        foreground_mask = (foreground_mask == 255).astype(np.uint8) * 255  
         return foreground_mask
 
     def _residual_mask(self, state: _TrackState, gray: np.ndarray) -> Optional[np.ndarray]:
-        """Residual foreground mask M_t^res, Eqs. (4)-(6)."""
+        
         if state.previous_gray is None or state.homography is None:
             return None
         if state.previous_gray.shape != gray.shape:
@@ -297,16 +279,16 @@ class ConfidenceTriggeredRelocalization:
         if not np.any(valid_region):
             return None
 
-        residual = cv2.absdiff(gray, aligned_previous)  # Eq. (4): R_t(p) = |I_t(p) - I~_{t-1}(p)|
+        residual = cv2.absdiff(gray, aligned_previous)  
         valid_residual = residual[valid_region].astype(np.float32)
         median = float(np.median(valid_residual))
         mad = float(np.median(np.abs(valid_residual - median)))
-        threshold = median + self.config.residual_mad_scale * mad  # Eq. (5): T_res = median(R_v) + alpha * MAD(R_v)
-        return ((residual > threshold) & valid_region).astype(np.uint8) * 255  # Eq. (6)
+        threshold = median + self.config.residual_mad_scale * mad  
+        return ((residual > threshold) & valid_region).astype(np.uint8) * 255  
 
     def _extract_candidates(self, foreground_mask: np.ndarray, previous_bbox: Optional[np.ndarray],
                             image_size: np.ndarray) -> List[np.ndarray]:
-        """External contours of M_t -> bounding rectangles, filtered by the previous target area."""
+        
         contours, _ = cv2.findContours(foreground_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         if previous_bbox is not None and bbox_is_valid(previous_bbox):
             previous_area = max(float(bbox_compute_area(previous_bbox)), 1.0)
@@ -331,8 +313,8 @@ class ConfidenceTriggeredRelocalization:
     def _select_candidate(self, candidates: List[np.ndarray], reference_bbox: np.ndarray,
                           previous_bbox: Optional[np.ndarray], image_size: np.ndarray
                           ) -> Tuple[Optional[np.ndarray], float]:
-        # After the area filter, choose the rectangle nearest the MCC center.
-        # Ties are broken lexicographically for deterministic OpenCV-independent order.
+        
+        
         reference_center = bbox_get_center_point(reference_bbox)
         if not candidates:
             return None, float('inf')
@@ -340,7 +322,7 @@ class ConfidenceTriggeredRelocalization:
             float(np.linalg.norm(bbox_get_center_point(box) - reference_center)), *box.tolist()))
         return best, float(np.linalg.norm(bbox_get_center_point(best) - reference_center))
 
-    # ------------------------------------------------------------------ stats
+    
     def _observe_confidence(self, predicted_score: float):
         predicted_score = float(predicted_score)
         stats = self._stats
@@ -375,7 +357,7 @@ class ConfidenceTriggeredRelocalization:
 
 
 def _to_gray_uint8(image: torch.Tensor) -> np.ndarray:
-    # The evaluation pipeline supplies raw pixels in [0,255], including float crops.
+    
     image = image.detach().cpu()
     if image.ndim == 3 and image.shape[0] in (1, 3):
         image = image.permute(1, 2, 0)

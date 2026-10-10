@@ -119,13 +119,13 @@ class EpochEventCheckpointDumper(_CheckpointDumper):
         folder_path = os.path.join(self._output_path, self._get_folder_name(epoch))
         _create_folder(folder_path)
 
-        # dump model state
+        
         if model_state_dict_getter is not None:
             model_state_file_path = os.path.join(folder_path, _get_model_weight_file_name())
             _save_model_weight(model_state_dict_getter, model_state_file_path, dumped_file_paths.model)
 
         if self._resumable and application_state_getter is not None:
-            # dump application state
+            
             application_state_file_path = os.path.join(folder_path, _get_app_state_file_name())
             _save_application_state(application_state_getter, application_state_file_path, dumped_file_paths.app_state)
 
@@ -226,8 +226,8 @@ class CheckpointDumper:
     def __init__(self, checkpoint_dumpers: Iterable[_CheckpointDumper]):
         self._checkpoint_dumpers = tuple(dumper for dumper in checkpoint_dumpers if not isinstance(dumper, _CheckpointDumper_with_metrics))
         self._metric_based_checkpoint_dumpers = tuple(dumper for dumper in checkpoint_dumpers if isinstance(dumper, _CheckpointDumper_with_metrics))
-        self._model_weight_dedup_cache: Dict[int, List[str]] = {}  # model weight version -> file path
-        self._app_state_dedup_cache: Dict[int, List[str]] = {}  # epoch -> file path
+        self._model_weight_dedup_cache: Dict[int, List[str]] = {}  
+        self._app_state_dedup_cache: Dict[int, List[str]] = {}  
 
     def temporary_dump(self, epoch: int, model_weight_version: int,
                        model_state_dict_getter: Optional[Callable[[], Mapping[str, Any]]]):

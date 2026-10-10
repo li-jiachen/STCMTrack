@@ -27,7 +27,7 @@ _plot_draw_style = [{'color': (1.0, 0.0, 0.0), 'line_style': '-'},
 def generate_plot(y: np.ndarray, x: np.ndarray, scores: np.ndarray,
                   tracker_name_list: Sequence[str], plot_draw_styles: Sequence[Mapping[str, Any]],
                   f: BinaryIO, plot_opts: dict):
-    # Plot settings
+    
     font_size = plot_opts.get('font_size', 12)
     font_size_axis = plot_opts.get('font_size_axis', 13)
     line_width = plot_opts.get('line_width', 2)

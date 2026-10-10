@@ -62,7 +62,7 @@ def get_distributed_data_parallel_option(config: dict, model: torch.nn.Module, c
             assert len(criterion_parameters) > 0, "criterion has no parameters but config criterion_params_and_buffers_to_ignore has been set"
             criterion_params_and_buffers_to_ignore = _parse_params_and_buffers_to_ignore(criterion_params_and_buffers_to_ignore_rules, criterion_parameters)
 
-    # if torch_compile_enabled:
-    #     static_graph = False
+    
+    
 
     return DistributedDataParallelOption(find_unused_parameters, gradient_as_bucket_view, static_graph, enable_sync_bn, params_and_buffers_to_ignore, criterion_params_and_buffers_to_ignore)

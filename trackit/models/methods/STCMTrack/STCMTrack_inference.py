@@ -1,4 +1,4 @@
-"""Streaming inference shares the exact encoder and heads used for training."""
+
 from typing import List
 import torch
 from .STCMTrack import STCMTrack_DINOv2
@@ -44,7 +44,7 @@ class STCMTrackInference_DINOv2(STCMTrack_DINOv2):
             history = (torch.stack(snapshots).unsqueeze(0).to(raw_tokens)
                        if snapshots else None)
             outputs.append(self.ltcp(raw_tokens[row:row + 1], history, state_token[row:row + 1]))
-        # Store X_t before fusion, after each forward, independently of CTR confidence.
+        
         dtype = get_ltcp_memory_dtype(self.ltcp_config.memory_dtype, raw_tokens.dtype)
         device = 'cpu' if self.ltcp_config.memory_device == 'cpu' else raw_tokens.device
         for row, task_id in enumerate(ids):

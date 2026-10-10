@@ -90,7 +90,7 @@ def _get_optimizer_param_stats_helper(model: nn.Module, optimizer_param_dict: Li
 def _check_optimizer_params(model: nn.Module, criterion: Optional[nn.Module],
                             optimizer_param_dict: List[Dict[str, Any]]):
     model_named_parameters_all = dict(model.named_parameters())
-    # filter out frozen parameters
+    
     model_named_parameters = {name: param for name, param in model_named_parameters_all.items() if param.requires_grad}
     if len(model_named_parameters) < len(model_named_parameters_all):
         print(f'optimizer: {len(model_named_parameters_all) - len(model_named_parameters)} out of {len(model_named_parameters_all)} parameters are frozen, not optimized.')

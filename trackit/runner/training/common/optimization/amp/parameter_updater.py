@@ -38,7 +38,7 @@ class ParameterUpdater_WithAMPSupport:
         self._grad_scaler.scale(loss).backward(create_graph=create_graph)
         norm = None
         if update_grad:
-            self._grad_scaler.unscale_(optimizer)  # unscale the gradients of optimizer's assigned params in-place
+            self._grad_scaler.unscale_(optimizer)  
             if self._max_grad_norm is not None:
                 norm = torch.nn.utils.clip_grad_norm_(_get_params_from_optimizer_grouped_params(optimizer), self._max_grad_norm).item()
             elif self._always_get_grad_norm:

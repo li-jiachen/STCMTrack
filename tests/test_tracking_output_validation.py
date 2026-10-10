@@ -1,4 +1,4 @@
-"""Shared failure handling for the independent SPMTrack and STCMTrack pipelines."""
+
 from collections import deque
 from types import SimpleNamespace
 import contextlib
@@ -66,7 +66,7 @@ class TrackingOutputValidationTests(unittest.TestCase):
                     for value in (float('nan'), float('inf'), -float('inf')):
                         with self.subTest(model=cls.__name__, field=field, value=value):
                             output = dense_output()
-                            # The last box is not at the selected peak; it must still be checked.
+                            
                             output[field].reshape(-1)[-1] = value
                             with self.assertRaisesRegex(ValueError, f'non-finite.*{field}'):
                                 post_process(output)

@@ -7,7 +7,7 @@ def get_model_build_context(config: dict) -> ModelBuildingContext:
         from .STCMTrack.builder import get_STCMTrack_build_context
         build_context = get_STCMTrack_build_context(config)
     elif config['type'] == 'SPMTrack':
-        # Independent baseline (official SPMTrack structure); shares no model code with STCMTrack.
+        
         from .SPMTrack.builder import get_SPMTrack_build_context
         build_context = get_SPMTrack_build_context(config)
     else:

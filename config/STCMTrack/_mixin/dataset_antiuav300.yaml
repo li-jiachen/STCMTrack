@@ -1,6 +1,3 @@
-# Train / validate / test on the infrared videos of Anti-UAV (`antiuav300` in the scripts) instead of Anti-UAV410.
-# Prepare the data with tools/prepare_antiuav.py and set the ANTIUAV300_* paths in consts.yaml.
-# Place this mixin before `evaluation` and `eval_short`.
 - path: "run.data.train.source.parameters.datasets"
   value:
     - name: "AntiUAV300_Train"

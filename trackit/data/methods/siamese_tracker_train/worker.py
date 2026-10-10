@@ -38,9 +38,9 @@ def _decode_with_cache(name: str, to_decode: Sequence[SamplingResult_Element], d
         if element not in cache:
             cache[element] = _decode(element, datasets, rng_engine, prefetch)
         result[f"{name}-{i}"] = cache[element]
-    #if to_decode not in cache:
-    #    cache[to_decode] = _decode(to_decode, datasets, rng_engine, prefetch)
-    #result[name] = cache[to_decode]
+    
+    
+    
 
 
 def _prepare_siamese_training_pair(global_job_index: int, batch_element_index: int,
@@ -55,7 +55,7 @@ def _prepare_siamese_training_pair(global_job_index: int, batch_element_index: i
     _decode_with_cache('z', training_pair.z, datasets, cache, result, rng_engine, prefetch)
     _decode_with_cache('x', training_pair.x, datasets, cache, result, rng_engine, prefetch)
     decoded_training_pair = SiameseTrainingMultiPair(training_pair.is_positive, [result[key] for key in result.keys() if 'z' in key], [result[key] for key in result.keys() if 'x' in key])
-    # bug check
+    
     if decoded_training_pair.is_positive:
         for item in decoded_training_pair.template:
             assert item.object_exists
