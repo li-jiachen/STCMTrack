@@ -1,0 +1,26 @@
+- path: "run.data.train.source.parameters.datasets"
+  value:
+    - name: "AntiUAV300_Train"
+      type: "SOT"
+      splits: ["train"]
+- path: "run.data.val.source.parameters.datasets"
+  value:
+    - name: "AntiUAV300_Val"
+      type: "SOT"
+      splits: ["val"]
+- path: "run.data.test.source.parameters.datasets"
+  value:
+    - name: "AntiUAV300"
+      type: "SOT"
+      splits: ["test"]
+- path: "run.data.eval.source.parameters.datasets"
+  value:
+    - name: "AntiUAV300"
+      type: "SOT"
+      splits: ["test"]
+- path: "logging.tags"
+  action: "append"
+  value: "antiuav300"
+- path: "name"
+  action: "append"
+  value: "-antiuav300"
