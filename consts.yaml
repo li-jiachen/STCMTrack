@@ -1,0 +1,14 @@
+num_train_workers: 4
+num_val_workers: 4
+num_eval_workers: 4
+num_io_threads_per_worker: 1
+on_shared_file_system: false
+
+
+ANTIUAV410_PATH: '../antiuav410/test'
+ANTIUAV410_TRAIN_PATH: '../antiuav410/train'
+ANTIUAV410_VAL_PATH: '../antiuav410/val'
+
+ANTIUAV300_TRAIN_PATH: '../antiuav300_ir/train'
+ANTIUAV300_VAL_PATH: '../antiuav300_ir/val'
+ANTIUAV300_TEST_PATH: '../antiuav300_ir/test'
